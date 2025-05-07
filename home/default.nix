@@ -1,38 +1,13 @@
 { config, pkgs, ... }:
 
 {
-  programs.zsh = {
-    enable = true;
-    ohMyZsh = {
-      enable = true;
-      theme = "robbyrussell";
-      plugins = [ "git" "z" ];
-    };
-  };
+  home.username = "lakrisal";
+  home.homeDirectory = "/home/lakrisal"
+  home.stateVersion = "23.11";
 
-  programs.alacritty = {
-    enable = true;
-    settings = {
-      # Add your Alacritty settings here
-    };
-  };
+  programs.git.enable = true;
+  programs.zsh.enable = true;
 
-  programs.waybar = {
-    enable = true;
-    # Configure Waybar settings
-  };
-
-  home.file.".config/hypr" = {
-    source = ./modules/hypr;
-    recursive = true;
-  };
-
-  home.packages = with pkgs; [
-    hyprland
-    waybar
-    alacritty
-    zsh
-    ghostty
-  ];
+  # Have to add platform neutral programs
 }
 

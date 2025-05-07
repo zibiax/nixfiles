@@ -1,5 +1,5 @@
-{
-  description = "Zibiax's cross-platform dotfiles";
+{{
+  description = "Unified NixOS and macOS configuration";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -11,25 +11,42 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, nix-darwin, home-manager, ... }:
-    let
-      system = "aarch64-darwin"; # or "x86_64-darwin" for Intel Macs
-      username = "zibiax";
-      pkgs = import nixpkgs { inherit system; };
-    in {
-      darwinConfigurations.${username} = nix-darwin.lib.darwinSystem {
-        inherit system;
-        modules = [
-          ./hosts/darwin/configuration.nix
-          home-manager.darwinModules.home-manager
-          {
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-            home-manager.users.${username} = import ./home/darwin.nix;
-          }
-        ];
-      };
-    };
+  outputs = { self, nixpkgs, nix-darwin, home-manager, flake-utils, ... }:
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = import nixpkgs { inherit system; };
+        username = "lakrisal";
+        hostname = "nixcomp";
+      in
+      {
+        nixosConfigurations.${hostname} = nixpkgs.lib.nixosSystem {
+          inherit system;
+          modules = [
+            ./hosts/nixos/${hostname}.nix
+            home-manager.nixosModules.home-manager
+            {
+              home-manager.useGlobalPkgs = true;
+              home-manager.useUserPackages = true;
+              home-manager.users.${username} = import ./home/nixos.nix;
+            }
+          ];
+        };
+
+        darwinConfigurations.${hostname} = nix-darwin.lib.darwinSystem {
+          inherit system;
+          modules = [
+            ./hosts/darwin/${hostname}.nix
+            home-manager.darwinModules.home-manager
+            {
+              home-manager.useGlobalPkgs = true;
+              home-manager.useUserPackages = true;
+              home-manager.users.${username} = import ./home/darwin.nix;
+            }
+          ];
+        };
+      });
 }
+
