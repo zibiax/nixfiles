@@ -1,7 +1,7 @@
 { config, pkgs, ... }:
 
 {
-  networking.hostName = "your-hostname";
+  networking.hostName = "zibiax";
   time.timeZone = "Europe/Stockholm";
 
   # TODO add more nix specific programs
