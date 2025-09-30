@@ -1,8 +1,7 @@
 # Nixfiles
 
-The scope of this project is to create a portable config for both NixOS and macOS. For my linux-laptop, desktop, server and mac-laptop.
+The scope of this project is to create a portable config for NixOS, and MacOS. For my linux-laptop, desktop, server, and mac-laptop.
 
-I want to port over my neovim config, tmux config etc.
 
 ## Secrets with agenix
 
@@ -34,3 +33,6 @@ SSH private keys (and other sensitive files) are deployed via [agenix](https://g
 4. Ensure the original plain-text key is deleted (`shred` if on spinning disks) once the encryption is confirmed.
 
 On rebuild, any NixOS host whose public key is listed will place the decrypted key at `~/.ssh/id_ed25519` with the correct permissions. macOS machines can use the same secret after you create an age identity at `~/.config/age/keys.txt` and add its public part to `secrets/age-recipients.nix`.
+=======
+I want to port over my neovim config, tmux config etc...
+>>>>>>> origin/master
