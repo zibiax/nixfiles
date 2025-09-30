@@ -1,7 +1,6 @@
 # Nixfiles
 
-The scope of this project is to create a portable config for NixOS, and MacOS. For my linux-laptop, desktop, server, and mac-laptop.
-
+The scope of this project is to create a portable config for NixOS, and MacOS. For my laptop, desktop, server, and mac.
 
 ## Secrets with agenix
 
