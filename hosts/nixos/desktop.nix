@@ -24,6 +24,11 @@
     slurp
     swaybg
     waybar
+    zsh
+    hypr
+    ghostty
+    proton-pass-cli
+
   ];
 
   services.printing.enable = true;
