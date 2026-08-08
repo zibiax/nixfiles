@@ -6,6 +6,11 @@
   home.packages = with pkgs; [
     jq
     wget
+    aerospace
+    helium
+    ghostty
+    awk
+
   ];
 
   home.file."Library/Application Support/ghostty/config" = {
