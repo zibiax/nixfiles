@@ -10,5 +10,6 @@
     coreutils
     gnugrep
     gnused
+    ripgrep
   ];
 }
