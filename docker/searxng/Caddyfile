@@ -1,0 +1,10 @@
+# Reverse proxy for SearXNG with basic auth protection
+{$SEARXNG_HOSTNAME:localhost} {
+    encode zstd gzip
+
+    basicauth * {
+        {$SEARXNG_AUTH_USER} {$SEARXNG_AUTH_PASS_BCRYPT}
+    }
+
+    reverse_proxy 127.0.0.1:8080
+}

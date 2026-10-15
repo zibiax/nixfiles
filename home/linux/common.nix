@@ -9,7 +9,7 @@
   services.gpg-agent = {
     enable = true;
     defaultCacheTtl = 7200;
-    pinentryPackage = pkgs.pinentry-qt;
+    pinentry.package = pkgs.pinentry-qt;
   };
 
   home.packages = with pkgs; [

@@ -7,7 +7,9 @@
   // "spacing": 4, // Gaps between modules (4px)
   "output": "DP-1",
   // Choose the order of the modules
-  "modules-left": ["hyprland/workspaces", "clock", "custom/kernel", "custom/pacman","mpd"],
+  // custom/ws* replace "hyprland/workspaces": its click is broken with hyprland.lua
+  "modules-left": ["custom/ws1", "custom/ws2", "custom/ws3", "custom/ws4", "custom/ws5",
+                   "custom/ws6", "custom/ws7", "custom/ws8", "custom/ws9", "clock", "custom/kernel", "custom/pacman","mpd"],
   "modules-center": ["hyprland/window"],
   "modules-right": [ "tray", "temperature", "cpu", "memory","network", "pulseaudio"],
 
@@ -79,9 +81,77 @@
     "icon-size": 18,
     "spacing": 8,
   },
-  "hyprland/workspaces": {
-    "disable-scroll": false,
-    "on-click": "activate"
+  "custom/ws1": {
+    "exec": "$HOME/.config/waybar/scripts/ws-button.sh 1",
+    "return-type": "json",
+    "on-click": "hyprctl dispatch 'hl.dsp.focus({ workspace = 1 })'",
+    "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
+    "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'",
+    "tooltip": false
+  },
+  "custom/ws2": {
+    "exec": "$HOME/.config/waybar/scripts/ws-button.sh 2",
+    "return-type": "json",
+    "on-click": "hyprctl dispatch 'hl.dsp.focus({ workspace = 2 })'",
+    "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
+    "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'",
+    "tooltip": false
+  },
+  "custom/ws3": {
+    "exec": "$HOME/.config/waybar/scripts/ws-button.sh 3",
+    "return-type": "json",
+    "on-click": "hyprctl dispatch 'hl.dsp.focus({ workspace = 3 })'",
+    "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
+    "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'",
+    "tooltip": false
+  },
+  "custom/ws4": {
+    "exec": "$HOME/.config/waybar/scripts/ws-button.sh 4",
+    "return-type": "json",
+    "on-click": "hyprctl dispatch 'hl.dsp.focus({ workspace = 4 })'",
+    "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
+    "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'",
+    "tooltip": false
+  },
+  "custom/ws5": {
+    "exec": "$HOME/.config/waybar/scripts/ws-button.sh 5",
+    "return-type": "json",
+    "on-click": "hyprctl dispatch 'hl.dsp.focus({ workspace = 5 })'",
+    "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
+    "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'",
+    "tooltip": false
+  },
+  "custom/ws6": {
+    "exec": "$HOME/.config/waybar/scripts/ws-button.sh 6",
+    "return-type": "json",
+    "on-click": "hyprctl dispatch 'hl.dsp.focus({ workspace = 6 })'",
+    "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
+    "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'",
+    "tooltip": false
+  },
+  "custom/ws7": {
+    "exec": "$HOME/.config/waybar/scripts/ws-button.sh 7",
+    "return-type": "json",
+    "on-click": "hyprctl dispatch 'hl.dsp.focus({ workspace = 7 })'",
+    "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
+    "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'",
+    "tooltip": false
+  },
+  "custom/ws8": {
+    "exec": "$HOME/.config/waybar/scripts/ws-button.sh 8",
+    "return-type": "json",
+    "on-click": "hyprctl dispatch 'hl.dsp.focus({ workspace = 8 })'",
+    "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
+    "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'",
+    "tooltip": false
+  },
+  "custom/ws9": {
+    "exec": "$HOME/.config/waybar/scripts/ws-button.sh 9",
+    "return-type": "json",
+    "on-click": "hyprctl dispatch 'hl.dsp.focus({ workspace = 9 })'",
+    "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
+    "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'",
+    "tooltip": false
   },
   "mpd": {
     "format": "<span color=\"#7aa2f7\">{stateIcon} </span>{artist} - {title}",

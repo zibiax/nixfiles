@@ -1,0 +1,33 @@
+return {
+  "FeiyouG/commander.nvim",
+  dependencies = {
+    "nvim-telescope/telescope.nvim",
+  },
+  keys = {
+    { "<leader>z",  "<CMD>Telescope commander<CR>", mode = "n" },
+    { "<leader>zx", "<CMD>Telescope commander<CR>", mode = "n" }
+  },
+  config = function()
+    require("commander").setup({
+      components = {
+        "DESC",
+        "KEYS",
+        "CAT",
+      },
+      sort_by = {
+        "DESC",
+        "KEYS",
+        "CAT",
+        "CMD"
+      },
+      integration = {
+        telescope = {
+          enable = true,
+        },
+        lazy = {
+          enable = true
+        }
+      }
+    })
+  end,
+}

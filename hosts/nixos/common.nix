@@ -4,6 +4,13 @@
   nix.settings = {
     experimental-features = [ "nix-command" "flakes" ];
     auto-optimise-store = true;
+    trusted-users = [ "root" user ];
+  };
+
+  nix.gc = {
+    automatic = true;
+    dates = "weekly";
+    options = "--delete-older-than 14d";
   };
 
   nixpkgs.config.allowUnfree = true;
@@ -26,7 +33,7 @@
 
   users.users.${user} = {
     isNormalUser = true;
-    description = user;
+    description = lib.mkDefault user;
     extraGroups = [ "wheel" "networkmanager" "audio" "video" ];
     createHome = true;
     home = "/home/${user}";

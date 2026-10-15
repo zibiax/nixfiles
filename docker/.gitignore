@@ -1,0 +1,3 @@
+# Secrets and runtime data stay out of git
+.env
+jellyfin/config/

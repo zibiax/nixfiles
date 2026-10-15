@@ -1,18 +1,11 @@
 #!/bin/sh
-format() {
-	if [ "$1" -eq 0 ]; then
-		echo '-'
-	else
-		echo "$1"
-	fi
-}
-
-updates_arch=$(checkupdates 2>/dev/null | wc -l)
-updates_aur=$(yay -Qum 2>/dev/null | wc -l)
-updates=$((updates_arch + updates_aur))
-
-if [ "$updates" -gt 0 ]; then
-	echo "($(format "$updates_arch")/$(format "$updates_aur"))"
+# NixOS: show how many days old the nixpkgs input in the flake lock is.
+lock="$HOME/nixfiles/flake.lock"
+[ -f "$lock" ] || { echo "-"; exit 0; }
+modified=$(jq -r '.nodes.nixpkgs.locked.lastModified' "$lock")
+days=$(( ($(date +%s) - modified) / 86400 ))
+if [ "$days" -gt 0 ]; then
+	echo "${days}d"
 else
 	echo "Up to date."
 fi

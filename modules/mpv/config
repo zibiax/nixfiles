@@ -1,0 +1,63 @@
+###General###
+# Fallback to more reliable rendering methods
+vo=gpu
+gpu-api=opengl
+# Avoid Vulkan which is causing problems
+#gpu-api=vulkan
+hwdec=auto
+x11-name="mpv"
+force-window=immediate
+fullscreen=yes
+keep-open=yes
+autofit=50%
+vf=format=colorlevels=limited:colormatrix=auto
+
+###OSD###
+cursor-autohide=100
+ 
+###Priority###
+#slang=zxx,gem,ger,gmh,eng,enm
+#alang=ger,jpn,eng,enm
+ 
+###Audio###
+volume=80
+volume-max=100
+audio-file-auto=fuzzy
+af="loudnorm"
+ 
+###Subs###
+demuxer-mkv-subtitle-preroll=yes
+sub-ass-use-video-data=all
+blend-subtitles=no
+sub-fix-timing=no
+sub-auto=fuzzy
+sub-font=Fontin Sans Rg
+sub-font-size=48
+sub-blur=0.0
+sub-border-color=0.0/0.0/0.0/1.0
+sub-border-size=3.0
+sub-color=1.0/1.0/1.0/1.0
+sub-margin-x=100
+sub-margin-y=50
+sub-shadow-color=0.0/0.0/0.0/0.4
+sub-shadow-offset=0.5
+ 
+###Screenshot###
+screenshot-sw=yes
+screenshot-format=jpg
+screenshot-high-bit-depth=no
+screenshot-png-compression=9
+screenshot-jpeg-quality=90
+screenshot-directory=~/Pictures/Screenshots/
+screenshot-template="SPOILER_%f-%wH.%wM.%wS.%wT"
+ 
+###Scaling###
+# Simple scaling for compatibility
+scale=bilinear
+cscale=bilinear
+dscale=bilinear
+ 
+###Profiles###
+[WebDL]
+profile-cond=string.match(p.filename, "%[Web%-DL%]")~=nil
+deband=yes
