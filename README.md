@@ -26,7 +26,7 @@ Day to day:
 
 ```bash
 rebuild   # sudo nixos-rebuild switch --flake ~/nixfiles#desktop
-upgrade   # nix flake update + rebuild (replaces paru -Syu)
+upgrade   # git pull (CI's updated flake.lock) + rebuild (replaces paru -Syu)
 ```
 
 ## Moving the desktop from EndeavourOS to NixOS
@@ -109,8 +109,9 @@ The desktop runs `linuxPackages-cachyos-latest-lto-x86_64-v3` from
 system (nvidia and virtualbox modules are built against the kernel), and pushes
 the results to the `zibiax` Cachix cache. It runs on pushes that touch the
 desktop config, by hand, and every Monday. Monday runs and manual runs with
-"update" ticked bump the kernel first and commit `flake.lock` after a build
-succeeds.
+"update" ticked run `nix flake update` first, and `flake.lock` is committed
+only after the whole system has built. Don't update the lock locally, or the
+desktop will compile whatever CI hasn't built yet.
 
 One-time setup:
 

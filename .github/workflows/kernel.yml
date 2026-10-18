@@ -11,11 +11,11 @@ on:
   workflow_dispatch:
     inputs:
       update:
-        description: "Bump nix-cachyos-kernel to its latest release first"
+        description: "Update all flake inputs (kernel included) first"
         type: boolean
         default: false
   schedule:
-    # Mondays 03:00 UTC: bump the kernel and rebuild.
+    # Mondays 03:00 UTC: update all inputs and rebuild.
     - cron: "0 3 * * 1"
   push:
     branches: [master]
@@ -51,7 +51,7 @@ jobs:
           sudo docker image prune --all --force
           df -h /
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: cachix/install-nix-action@v31
         with:
@@ -60,14 +60,16 @@ jobs:
             max-jobs = auto
             cores = 0
 
-      - uses: cachix/cachix-action@v16
+      - uses: cachix/cachix-action@v17
         with:
           name: ${{ env.CACHIX_CACHE }}
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
-      - name: Update kernel input
+      - name: Update flake inputs
+        # The kernel is built from nix-cachyos-kernel's own nixpkgs, so bumping
+        # our nixpkgs alone doesn't trigger a kernel rebuild.
         if: github.event_name == 'schedule' || inputs.update
-        run: nix flake update nix-cachyos-kernel
+        run: nix flake update
 
       - name: Show kernel version
         run: |
@@ -80,13 +82,15 @@ jobs:
             .#nixosConfigurations.$HOST.config.boot.kernelPackages.kernel
 
       - name: Build system
+        # --keep-going: one broken nixpkgs package shouldn't stop the kernel
+        # modules (nvidia, virtualbox, v4l2loopback) from reaching Cachix.
         run: |
-          nix build -L --no-link --print-out-paths \
+          nix build -L --keep-going --no-link --print-out-paths \
             .#nixosConfigurations.$HOST.config.system.build.toplevel
 
       - name: Commit flake.lock
-        # Only lands once the build above has succeeded. Also commits the lock
-        # entry for a newly added input (there's no local nix to create it).
+        # Only lands once the whole system has built, so pulling master never
+        # leaves the desktop with something CI hasn't built.
         run: |
           if git diff --quiet flake.lock; then
             echo "flake.lock unchanged"
@@ -95,5 +99,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add flake.lock
-          git commit -m "flake.lock: update nix-cachyos-kernel ($(nix eval --raw .#nixosConfigurations.$HOST.config.boot.kernelPackages.kernel.version))"
+          git commit -m "flake.lock: update (kernel $(nix eval --raw .#nixosConfigurations.$HOST.config.boot.kernelPackages.kernel.version))"
           git push

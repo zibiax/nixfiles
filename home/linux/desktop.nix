@@ -55,8 +55,9 @@ in
   programs.zsh = {
     shellAliases = {
       rebuild = "sudo nixos-rebuild switch --flake ${repo}#desktop";
-      # nix-cachyos-kernel is left out: CI bumps it once the kernel is in Cachix.
-      upgrade = "git -C ${repo} pull --rebase && nix flake update --flake ${repo} nixpkgs nix-darwin home-manager nixos-hardware agenix flake-utils && sudo nixos-rebuild switch --flake ${repo}#desktop";
+      # CI (.github/workflows/kernel.yml) updates flake.lock once everything is
+      # built and in Cachix, so upgrading is just pulling its lock.
+      upgrade = "git -C ${repo} pull --rebase && sudo nixos-rebuild switch --flake ${repo}#desktop";
       updates = "nix flake update --flake ${repo} --output-lock-file /tmp/flake.lock.new && diff <(jq -S .nodes ${repo}/flake.lock) <(jq -S .nodes /tmp/flake.lock.new)";
       tmux-save = "~/bin/tmux-script.sh save";
       tmux-restore = "~/bin/tmux-script.sh restore";
