@@ -3,3 +3,4 @@ result-*
 modules/lazygit/state.yml
 modules/ncmpcpp/error.log
 modules/btop/btop.log
+secrets

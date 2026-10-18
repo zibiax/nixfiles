@@ -71,6 +71,13 @@ in
     };
     initContent = ''
       ssh-add -l &>/dev/null || pass-cli ssh-agent load --vault-name "Personal" 2>/dev/null
+
+      # Was `paru -Rcs`: remove packages added with `nix profile add` and
+      # drop what nothing uses anymore. Packages from this repo are removed
+      # by deleting them from the config and running `rebuild`.
+      yeet() {
+        nix profile remove "$@" && nix-collect-garbage
+      }
     '';
     # Start Hyprland when logging in on tty1 (same as the Arch .zprofile).
     profileExtra = ''

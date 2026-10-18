@@ -125,6 +125,31 @@
   virtualisation.virtualbox.host.enable = true;
   virtualisation.waydroid.enable = true;
 
+  # Docker sets the FORWARD policy to DROP, which cuts Waydroid off from the
+  # network (was /etc/systemd/system/waydroid-docker-fix.service on Arch).
+  systemd.services.waydroid-docker-fix = {
+    description = "Allow Waydroid traffic through Docker's FORWARD chain";
+    after = [ "docker.service" "waydroid-container.service" ];
+    requires = [ "docker.service" ];
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = [
+        "${pkgs.iptables}/bin/iptables -I DOCKER-USER -i waydroid0 -j ACCEPT"
+        "${pkgs.iptables}/bin/iptables -I DOCKER-USER -o waydroid0 -j ACCEPT"
+      ];
+    };
+  };
+
+  # USB access without root (were /etc/udev/rules.d/{51-android,99-gd32v}.rules).
+  # Arch used GROUP="plugdev", which NixOS doesn't have; uaccess grants the
+  # logged-in user instead.
+  services.udev.extraRules = ''
+    SUBSYSTEM=="usb", ATTR{idVendor}=="2a70", MODE="0666", TAG+="uaccess"
+    ATTRS{idVendor}=="28e9", ATTRS{idProduct}=="0189", MODE="0666", ENV{ID_MM_DEVICE_IGNORE}="1", ENV{ID_MM_PORT_IGNORE}="1"
+  '';
+
   # ---------------------------------------------------------------- servers
   services.openssh.enable = true;
 
