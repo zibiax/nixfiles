@@ -192,7 +192,8 @@ in
     lua-language-server
     clang-tools
     gopls
-    rust-analyzer
+    # rustup ships a rust-analyzer proxy too; prefer this standalone one.
+    (lib.hiPrio rust-analyzer)
     typescript-language-server
     jdt-language-server
     (python3.withPackages (ps: with ps; [
