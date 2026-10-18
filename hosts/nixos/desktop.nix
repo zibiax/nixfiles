@@ -1,4 +1,4 @@
-{ config, lib, pkgs, user, ... }:
+{ config, lib, pkgs, user, inputs, ... }:
 
 {
   imports = [ ./hardware/desktop.nix ];
@@ -11,6 +11,16 @@
     configurationLimit = 10;
   };
   boot.loader.efi.canTouchEfiVariables = true;
+
+  # CachyOS kernel, built by .github/workflows/kernel.yml and pushed to Cachix.
+  # Zen 3 has AVX2 but not AVX-512, so x86_64-v3 is the highest level it runs.
+  nixpkgs.overlays = [ inputs.nix-cachyos-kernel.overlays.pinned ];
+  boot.kernelPackages = pkgs.cachyosKernels.linuxPackages-cachyos-latest-lto-x86_64-v3;
+  nix.settings = {
+    extra-substituters = [ "https://zibiax.cachix.org" ];
+    # Public key from https://app.cachix.org/cache/zibiax
+    extra-trusted-public-keys = [ "zibiax.cachix.org-1:hv/erLbzkaytiLpCDbH5pEKSG1BopOwEiu4t2PrSRyY=" ];
+  };
   boot.supportedFilesystems = [ "ntfs" ];
 
   zramSwap.enable = true;

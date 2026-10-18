@@ -68,7 +68,11 @@ git clone https://github.com/zibiax/nixfiles /mnt/home/martin/nixfiles
 cp /mnt/etc/nixos/hardware-configuration.nix /mnt/home/martin/nixfiles/hosts/nixos/hardware/desktop.nix
 cd /mnt/home/martin/nixfiles && git add -A   # flakes only see tracked files
 
-nixos-install --flake /mnt/home/martin/nixfiles#desktop
+# The cache settings in desktop.nix only exist after install, so pass them here
+# or the CachyOS kernel gets compiled locally (see "CachyOS kernel" below).
+nixos-install --flake /mnt/home/martin/nixfiles#desktop \
+  --option extra-substituters https://zibiax.cachix.org \
+  --option extra-trusted-public-keys "zibiax.cachix.org-1:hv/erLbzkaytiLpCDbH5pEKSG1BopOwEiu4t2PrSRyY="
 nixos-enter --root /mnt -c 'passwd martin && chown -R martin:users /home/martin'
 reboot
 ```
@@ -96,6 +100,29 @@ Log in on tty1 and Hyprland starts (same as before, via `.zprofile`).
 - Plex removed (server, 8443 proxy, client and `plexcron.sh`).
 - Not ported (no nixpkgs package): MATLAB, Etcher, Popcorn Time, JDownloader, t3code, CUDA toolkit (use a devshell).
 - Commented out in `hosts/nixos/desktop.nix`, enable when needed: cloudflared, ollama (CUDA).
+
+## CachyOS kernel
+
+The desktop runs `linuxPackages-cachyos-latest-lto-x86_64-v3` from
+[nix-cachyos-kernel](https://github.com/xddxdd/nix-cachyos-kernel).
+`.github/workflows/kernel.yml` builds it, together with the rest of the desktop
+system (nvidia and virtualbox modules are built against the kernel), and pushes
+the results to the `zibiax` Cachix cache. It runs on pushes that touch the
+desktop config, by hand, and every Monday. Monday runs and manual runs with
+"update" ticked bump the kernel first and commit `flake.lock` after a build
+succeeds.
+
+One-time setup:
+
+1. Create a public cache on [cachix.org](https://app.cachix.org) (named
+   `zibiax`, or set the repo variable `CACHIX_CACHE` and update `desktop.nix`).
+2. Add an auth token for it as the repo secret `CACHIX_AUTH_TOKEN`.
+3. Put the cache's public key into `nix.settings.extra-trusted-public-keys` in
+   `hosts/nixos/desktop.nix`.
+
+Updating: wait for the workflow to go green, then `upgrade` (pulls, then
+rebuilds). Check `uname -r` after rebooting. If a rebuild starts compiling
+`linux-...-cachyos`, the lock is ahead of the cache. Pull again or wait for CI.
 
 ## Secrets with agenix
 

@@ -1,0 +1,99 @@
+name: Build CachyOS kernel
+
+# Builds the desktop system (CachyOS kernel + the nvidia/virtualbox modules
+# built against it) and pushes everything not on cache.nixos.org to Cachix,
+# so `nixos-rebuild switch --flake .#desktop` downloads instead of compiling.
+#
+# Setup: create the cache on cachix.org, then add a repo secret
+# CACHIX_AUTH_TOKEN and (optionally) a repo variable CACHIX_CACHE.
+
+on:
+  workflow_dispatch:
+    inputs:
+      update:
+        description: "Bump nix-cachyos-kernel to its latest release first"
+        type: boolean
+        default: false
+  schedule:
+    # Mondays 03:00 UTC: bump the kernel and rebuild.
+    - cron: "0 3 * * 1"
+  push:
+    branches: [master]
+    paths:
+      - flake.nix
+      - flake.lock
+      - hosts/nixos/common.nix
+      - hosts/nixos/desktop.nix
+      - hosts/nixos/hardware/desktop.nix
+      - .github/workflows/kernel.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kernel
+  cancel-in-progress: true
+
+env:
+  CACHIX_CACHE: ${{ vars.CACHIX_CACHE || 'zibiax' }}
+  HOST: desktop
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Free disk space
+        # An LTO kernel build needs ~20 GB; the runner starts with ~14 GB free.
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /opt/hostedtoolcache /usr/local/share/boost /usr/share/swift
+          sudo docker image prune --all --force
+          df -h /
+
+      - uses: actions/checkout@v4
+
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            accept-flake-config = false
+            max-jobs = auto
+            cores = 0
+
+      - uses: cachix/cachix-action@v16
+        with:
+          name: ${{ env.CACHIX_CACHE }}
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Update kernel input
+        if: github.event_name == 'schedule' || inputs.update
+        run: nix flake update nix-cachyos-kernel
+
+      - name: Show kernel version
+        run: |
+          nix eval --raw .#nixosConfigurations.$HOST.config.boot.kernelPackages.kernel.version
+          echo
+
+      - name: Build kernel
+        run: |
+          nix build -L --no-link --print-out-paths \
+            .#nixosConfigurations.$HOST.config.boot.kernelPackages.kernel
+
+      - name: Build system
+        run: |
+          nix build -L --no-link --print-out-paths \
+            .#nixosConfigurations.$HOST.config.system.build.toplevel
+
+      - name: Commit flake.lock
+        # Only lands once the build above has succeeded. Also commits the lock
+        # entry for a newly added input (there's no local nix to create it).
+        run: |
+          if git diff --quiet flake.lock; then
+            echo "flake.lock unchanged"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add flake.lock
+          git commit -m "flake.lock: update nix-cachyos-kernel ($(nix eval --raw .#nixosConfigurations.$HOST.config.boot.kernelPackages.kernel.version))"
+          git push

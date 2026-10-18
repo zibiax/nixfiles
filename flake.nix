@@ -17,6 +17,9 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     flake-utils.url = "github:numtide/flake-utils";
+    # CachyOS kernels. `release` tracks versions known to build; don't make it
+    # follow our nixpkgs, the patches are pinned against its own.
+    nix-cachyos-kernel.url = "github:xddxdd/nix-cachyos-kernel/release";
   };
 
   outputs = inputs@{ self, nixpkgs, nix-darwin, home-manager, nixos-hardware, agenix, flake-utils, ... }:
