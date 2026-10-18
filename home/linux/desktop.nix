@@ -33,6 +33,7 @@ in
     "mpv"
     "qt6ct"
     "ranger"
+    "quickshell"
   ] // {
     "gtk-3.0/settings.ini".source = link "modules/gtk-3.0/settings.ini";
   };
@@ -41,6 +42,8 @@ in
     ".local/scripts".source = link "modules/scripts/local";
     "bin".source = link "modules/scripts/bin";
     "Pictures/Wallpapers".source = link "wallpapers";
+    # Icon font used by waybar, the rofi power menu and quickshell.
+    ".local/share/fonts/Feather.ttf".source = ../../modules/fonts/Feather.ttf;
   };
 
   # packer.nvim isn't managed by itself; bootstrap it like on Arch.

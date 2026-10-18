@@ -1,38 +1,54 @@
 import Quickshell
 import Quickshell.Hyprland
-import Quickshell.Services.SystemTray
-import Quickshell.Services.Pipewire
 import Quickshell.Io
+import Quickshell.Services.Pipewire
+import Quickshell.Services.SystemTray
+import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
-import QtQuick.Controls
 
+// Port of waybar/config-dp-1.jsonc + waybar/style.css. Waybar only runs on
+// DP-1 (see scripts/local/relaunch.sh), so this bar does too.
 PanelWindow {
     id: root
 
+    screen: Quickshell.screens.find(s => s.name === "DP-1") ?? Quickshell.screens[0]
     anchors {
         top: true
         left: true
         right: true
     }
-    height: 36
+    implicitHeight: 36
+    exclusiveZone: 36
     color: "transparent"
 
-    // Module state
-    property string cpuText: "..."
-    property string memText: "..."
-    property string tempText: "..."
-    property string netText: "..."
+    readonly property color moduleBg: "#160654"
+    readonly property color accent: "#7aa2f7"
+    readonly property color urgent: "#f7768e"
+    readonly property string netInterface: "enp39s0"
+    // hwmonN numbering changes between boots; this is the CPU's k10temp (Tctl).
+    readonly property string hwmonPath: "/sys/devices/pci0000:00/0000:00:18.3/hwmon/hwmon*/temp1_input"
+
+    property string cpuText: ""
+    property string memText: ""
+    property string tempText: ""
+    property string netText: ""
     property string kernelText: ""
     property string packagesText: ""
     property string mpdText: ""
+    property bool clockAlt: false
 
-    // Tokyo Night palette
-    readonly property color moduleBg:    "#160654"
-    readonly property color fg:          "#c0caf5"
-    readonly property color accent:      "#7aa2f7"
-    readonly property color urgentColor: "#f7768e"
-    readonly property string monoFont:   "SpaceMono Nerd Font"
+    // hyprland.lua only accepts Lua dispatchers ("hl.dsp.focus(...)"); the
+    // plain ones are kept for a hyprland.conf setup.
+    function focusWorkspace(ws) {
+        Hyprland.dispatch(Hyprland.usingLua
+            ? "hl.dsp.focus({ workspace = " + JSON.stringify(ws) + " })"
+            : "workspace " + ws)
+    }
+
+    function poll(proc) {
+        if (!proc.running) proc.running = true
+    }
 
     // ── Clock ────────────────────────────────────────────────────────
     SystemClock {
@@ -40,436 +56,333 @@ PanelWindow {
         precision: SystemClock.Seconds
     }
 
-    // ── System stats (polled every 3s, separate processes) ────────────
+    // ── CPU: waybar's bare "{}" is the 1-minute load average ──────────
     Process {
         id: cpuProc
-        running: false
-        command: ["bash", "-c", "top -bn1 | grep '%Cpu' | awk '{printf \"%.0f\", $2}'"]
-        stdout: SplitParser { onRead: line => root.cpuText  = line.trim() }
+        command: ["cat", "/proc/loadavg"]
+        stdout: SplitParser { onRead: line => root.cpuText = Number(line.split(" ")[0]) + "%" }
     }
+
+    // ── Memory: (MemTotal - MemAvailable) in GiB ──────────────────────
     Process {
         id: memProc
-        running: false
-        command: ["bash", "-c", "free --si -g | awk 'NR==2{print $3}'"]
-        stdout: SplitParser { onRead: line => root.memText  = line.trim() + "GiB" }
+        command: ["cat", "/proc/meminfo"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const kb = key => Number((text.match(new RegExp("^" + key + ":\\s+(\\d+)", "m")) || [0, 0])[1])
+                // waybar rounds to 2 decimals and drops trailing zeros (14.7, not 14.70)
+                root.memText = Number(((kb("MemTotal") - kb("MemAvailable")) / 1048576).toFixed(2)) + "GiB"
+            }
+        }
     }
+
+    // ── Temperature ──────────────────────────────────────────────────
     Process {
         id: tempProc
-        running: false
-        command: ["bash", "-c", "awk '{printf \"%.0f\", $1/1000}' /sys/class/hwmon/hwmon1/temp1_input 2>/dev/null || echo N/A"]
-        stdout: SplitParser { onRead: line => root.tempText = line.trim() + "°C" }
+        command: ["sh", "-c", "cat " + root.hwmonPath]
+        stdout: SplitParser {
+            onRead: line => root.tempText = Math.round(Number(line) / 1000) + "°C"
+        }
     }
-    Process {
-        id: netProc
-        running: false
-        command: ["bash", "-c", "ip -br link show enp39s0 2>/dev/null | awk '{print $2}' || echo offline"]
-        stdout: SplitParser { onRead: line => root.netText  = line.trim() }
-    }
+
     Timer {
         interval: 3000
         repeat: true
         running: true
         triggeredOnStart: true
         onTriggered: {
-            cpuProc.running  = false; cpuProc.running  = true
-            memProc.running  = false; memProc.running  = true
-            tempProc.running = false; tempProc.running = true
-            netProc.running  = false; netProc.running  = true
+            root.poll(cpuProc)
+            root.poll(memProc)
+            root.poll(tempProc)
         }
     }
 
-    // ── Kernel version (one-shot) ────────────────────────────────────
+    // ── Network: "<ifname> " while the link is up, hidden otherwise ──
+    Process {
+        id: netProc
+        command: ["cat", "/sys/class/net/" + root.netInterface + "/operstate"]
+        stdout: SplitParser {
+            onRead: line => root.netText = line.trim() === "up" ? root.netInterface + " " : ""
+        }
+        onExited: code => { if (code !== 0) root.netText = "" }
+    }
+    Timer {
+        interval: 10000
+        repeat: true
+        running: true
+        triggeredOnStart: true
+        onTriggered: root.poll(netProc)
+    }
+
+    // ── Kernel (once) ────────────────────────────────────────────────
     Process {
         running: true
-        command: ["bash", "-c", "uname -r | cut -d'-' -f1"]
-        stdout: SplitParser {
-            onRead: line => root.kernelText = line.trim()
-        }
+        command: ["sh", "-c", "uname -r | cut -d '-' -f1"]
+        stdout: SplitParser { onRead: line => root.kernelText = line.trim() }
     }
 
-    // ── Package updates (every 10 min) ───────────────────────────────
+    // ── nixpkgs lock age, same script as waybar's custom/pacman ───────
     Process {
         id: pkgProc
-        running: false
-        command: [
-            "bash", "-c",
-            "a=$(checkupdates 2>/dev/null | wc -l);" +
-            "b=$(yay -Qum 2>/dev/null | wc -l);" +
-            "t=$((a+b));" +
-            "if [ $t -gt 0 ]; then" +
-            "  echo \"($a/$b)\";" +
-            "else" +
-            "  echo 'Up to date.';" +
-            "fi"
-        ]
-        stdout: SplitParser {
-            onRead: line => root.packagesText = line.trim()
-        }
+        command: ["sh", "-c", "$HOME/.config/waybar/scripts/package-updates.sh"]
+        stdout: SplitParser { onRead: line => root.packagesText = line.trim() }
     }
     Timer {
         interval: 600000
         repeat: true
         running: true
         triggeredOnStart: true
-        onTriggered: { pkgProc.running = false; pkgProc.running = true }
+        onTriggered: root.poll(pkgProc)
     }
 
-    // ── MPD via mpc (every 5s) ───────────────────────────────────────
+    // ── MPD: waybar's mpd module formats ─────────────────────────────
+    function escapeHtml(s) {
+        return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    }
     Process {
         id: mpdProc
-        running: false
-        command: ["bash", "-c", "mpc --format '%artist% - %title%' current 2>/dev/null || echo ''"]
-        stdout: SplitParser {
-            onRead: line => root.mpdText = line.trim()
+        command: ["mpc", "--format", "%artist%\t%title%", "status"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (text.trim() === "") return // mpd down, see onExited
+                const lines = text.trim().split("\n")
+                const opts = lines[lines.length - 1]
+                const on = key => new RegExp(key + ":\\s*on").test(opts)
+                const state = lines.length >= 3 ? (lines[1].match(/^\[(\w+)\]/) || [])[1] : "stopped"
+                const blue = s => "<font color=\"#7aa2f7\">" + s + "</font>"
+
+                if (state === "playing") {
+                    const [artist, title] = lines[0].split("\t")
+                    root.mpdText = blue(" ") + root.escapeHtml((artist || "") + " - " + (title || ""))
+                } else if (state === "paused") {
+                    root.mpdText = ""
+                } else {
+                    root.mpdText = (on("consume") ? " " : "")
+                        + (on("random") ? " " : "<font color=\"#f53c3c\"></font> ")
+                        + (on("repeat") ? " " : "")
+                        + (on("single") ? "1 " : "")
+                        + "Stopped "
+                }
+            }
         }
+        onExited: code => { if (code !== 0) root.mpdText = "Disconnected " }
+    }
+    // Refresh on every player/option change, plus waybar's 10s interval.
+    Process {
+        id: mpdIdle
+        running: true
+        command: ["mpc", "idleloop", "player", "options"]
+        stdout: SplitParser { onRead: root.poll(mpdProc) }
     }
     Timer {
-        interval: 5000
+        interval: 10000
         repeat: true
         running: true
         triggeredOnStart: true
-        onTriggered: { mpdProc.running = false; mpdProc.running = true }
+        onTriggered: {
+            root.poll(mpdProc)
+            root.poll(mpdIdle)
+        }
     }
+
+    // ── Volume ───────────────────────────────────────────────────────
+    readonly property var sink: Pipewire.defaultAudioSink
+    PwObjectTracker { objects: [root.sink] }
 
     // ── Layout ───────────────────────────────────────────────────────
     Item {
         anchors.fill: parent
 
-        // LEFT ────────────────────────────────────────────────────────
+        // LEFT: ws1..9, clock, kernel, pacman, mpd
         RowLayout {
             anchors {
                 left: parent.left
                 verticalCenter: parent.verticalCenter
-                leftMargin: 4
             }
-            spacing: 4
+            spacing: 0
 
-            // Workspaces
-            Rectangle {
-                color: root.moduleBg
-                height: 30
-                implicitWidth: wsRow.implicitWidth + 8
-                radius: 4
+            // custom/ws*: only existing or focused workspaces are shown.
+            Repeater {
+                model: 9
 
-                RowLayout {
-                    id: wsRow
-                    anchors.centerIn: parent
-                    spacing: 0
+                Rectangle {
+                    id: ws
+                    required property int index
+                    readonly property int wsId: index + 1
+                    readonly property bool active: Hyprland.focusedWorkspace?.id === wsId
+                    readonly property bool exists: Hyprland.workspaces.values.some(w => w.id === wsId)
 
-                    Repeater {
-                        model: 9
+                    visible: active || exists
+                    implicitWidth: wsLabel.implicitWidth + 12
+                    implicitHeight: 30
+                    color: wsMouse.containsMouse ? "#ed2b2b" : root.moduleBg
 
-                        Item {
-                            required property int index
-                            readonly property int wsId: index + 1
-                            readonly property bool isActive:
-                                Hyprland.focusedWorkspace !== null &&
-                                Hyprland.focusedWorkspace.id === wsId
+                    Text {
+                        id: wsLabel
+                        anchors.centerIn: parent
+                        text: ws.wsId
+                        color: wsMouse.containsMouse ? "#cdd6f4" : "#c0caf5"
+                        font.family: "SpaceMono Nerd Font"
+                        font.weight: Font.Black
+                        font.pixelSize: 14
+                    }
 
-                            width: 22
-                            height: 28
-
-                            // Active underline
-                            Rectangle {
-                                anchors {
-                                    bottom: parent.bottom
-                                    horizontalCenter: parent.horizontalCenter
-                                }
-                                width: 14
-                                height: 2
-                                color: isActive ? root.accent : "transparent"
-                            }
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: wsId.toString()
-                                color: isActive ? root.accent : root.fg
-                                font.family: root.monoFont
-                                font.pixelSize: 12
-                                font.bold: isActive
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: Hyprland.dispatch("workspace " + wsId)
-                                cursorShape: Qt.PointingHandCursor
-                            }
+                    // box-shadow: inset 0 -2px #7aa2f7
+                    Rectangle {
+                        visible: ws.active
+                        anchors {
+                            left: parent.left
+                            right: parent.right
+                            bottom: parent.bottom
                         }
+                        height: 2
+                        color: root.accent
+                    }
+
+                    MouseArea {
+                        id: wsMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onClicked: root.focusWorkspace(ws.wsId)
+                        onWheel: wheel => root.focusWorkspace(wheel.angleDelta.y > 0 ? "e-1" : "e+1")
                     }
                 }
             }
 
-            // Clock
-            Rectangle {
-                color: root.moduleBg
-                height: 30
-                implicitWidth: clockLabel.implicitWidth + 16
-                radius: 4
-
-                Text {
-                    id: clockLabel
-                    anchors.centerIn: parent
-                    text: " " + Qt.formatDateTime(clock.date, "HH:mm:ss")
-                    color: root.fg
-                    font.family: root.monoFont
-                    font.pixelSize: 13
-                }
+            BarModule {
+                icon: root.clockAlt ? "" : ""
+                text: Qt.formatDateTime(clock.date, root.clockAlt ? "dd-MM-yyyy" : "HH:mm:ss")
+                onClicked: root.clockAlt = !root.clockAlt
             }
 
-            // Kernel
-            Rectangle {
-                color: root.moduleBg
-                height: 30
-                implicitWidth: kernelLabel.implicitWidth + 16
-                radius: 4
-                visible: root.kernelText.length > 0
-
-                Text {
-                    id: kernelLabel
-                    anchors.centerIn: parent
-                    text: " " + root.kernelText
-                    color: root.fg
-                    font.family: root.monoFont
-                    font.pixelSize: 13
-                }
+            BarModule {
+                icon: ""
+                text: root.kernelText
+                radius: 8
             }
 
-            // Packages
-            Rectangle {
-                color: root.moduleBg
-                height: 30
-                implicitWidth: pkgLabel.implicitWidth + 16
-                radius: 4
-                visible: root.packagesText.length > 0
-
-                Text {
-                    id: pkgLabel
-                    anchors.centerIn: parent
-                    text: " " + root.packagesText
-                    color: root.fg
-                    font.family: root.monoFont
-                    font.pixelSize: 13
-                }
+            BarModule {
+                icon: ""
+                text: root.packagesText
+                radius: 8
             }
 
-            // MPD
-            Rectangle {
-                color: root.moduleBg
-                height: 30
-                implicitWidth: Math.min(mpdLabel.implicitWidth + 16, 260)
-                radius: 4
-                visible: root.mpdText.length > 0
-                clip: true
-
-                Text {
-                    id: mpdLabel
-                    anchors.centerIn: parent
-                    width: Math.min(implicitWidth, 240)
-                    text: " " + root.mpdText
-                    color: root.accent
-                    font.family: root.monoFont
-                    font.pixelSize: 13
-                    elide: Text.ElideRight
-                }
-            }
-        }
-
-        // CENTER – active window title ─────────────────────────────────
-        Rectangle {
-            anchors.centerIn: parent
-            color: root.moduleBg
-            height: 30
-            width: Math.min(winTitle.implicitWidth + 16, 500)
-            radius: 4
-            clip: true
-
+            // #mpd has no rule in style.css: no block, default text colour.
             Text {
-                id: winTitle
-                anchors.centerIn: parent
-                width: Math.min(implicitWidth, 480)
-                text: Hyprland.activeToplevel ? Hyprland.activeToplevel.title : ""
-                color: root.fg
-                font.family: root.monoFont
-                font.pixelSize: 13
-                elide: Text.ElideRight
+                visible: root.mpdText.length > 0
+                text: root.mpdText
+                textFormat: Text.StyledText
+                color: "#c0caf5"
+                font.family: "SpaceMono Nerd Font"
+                font.weight: Font.Black
+                font.pixelSize: 14
             }
         }
 
-        // RIGHT ───────────────────────────────────────────────────────
+        // CENTER: hyprland/window, max-length 48
+        BarModule {
+            anchors.centerIn: parent
+            radius: 8
+            text: {
+                // Hyprland.activeToplevel stays null until the next focus
+                // event; the Wayland toplevel list knows it immediately.
+                const t = ToplevelManager.activeToplevel?.title ?? ""
+                return t.length > 48 ? t.slice(0, 47) + "…" : t
+            }
+        }
+
+        // RIGHT: tray, temperature, cpu, memory, network, pulseaudio
         RowLayout {
             anchors {
                 right: parent.right
                 verticalCenter: parent.verticalCenter
-                rightMargin: 4
             }
-            spacing: 4
+            spacing: 0
 
-            // System Tray
             Rectangle {
-                id: trayModule
-                color: root.moduleBg
-                height: 30
-                implicitWidth: trayRow.implicitWidth + 16
+                visible: SystemTray.items.values.length > 0
+                implicitWidth: trayRow.implicitWidth + 20
+                implicitHeight: 30
+                Layout.rightMargin: 16
                 radius: 16
-                visible: trayRow.implicitWidth > 0
+                color: root.moduleBg
 
-                RowLayout {
+                Row {
                     id: trayRow
                     anchors.centerIn: parent
-                    spacing: 6
+                    spacing: 8
 
                     Repeater {
                         model: SystemTray.items
 
-                        delegate: Item {
+                        Image {
+                            id: trayIcon
                             required property var modelData
-
                             width: 18
                             height: 18
-
-                            Image {
-                                anchors.fill: parent
-                                source: {
-                                    var icon = modelData.icon
-                                    if (!icon || icon.length === 0) return ""
-                                    if (icon.startsWith("/") || icon.startsWith("file://"))
-                                        return icon
-                                    return Quickshell.iconPath(icon) || ""
-                                }
-                                fillMode: Image.PreserveAspectFit
-                                smooth: true
-                            }
+                            source: modelData.icon
+                            sourceSize: Qt.size(18, 18)
+                            smooth: true
 
                             MouseArea {
                                 anchors.fill: parent
-                                acceptedButtons: Qt.LeftButton | Qt.RightButton
-                                hoverEnabled: true
-
-                                ToolTip.visible: containsMouse
-                                ToolTip.text: modelData.tooltipTitle || modelData.title || ""
-
+                                acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                                 onClicked: mouse => {
-                                    if (mouse.button === Qt.RightButton && modelData.hasMenu)
-                                        modelData.menu.open(this, mouseX, mouseY)
+                                    const item = trayIcon.modelData
+                                    if (mouse.button === Qt.MiddleButton) {
+                                        item.secondaryActivate()
+                                    } else if (item.hasMenu && (mouse.button === Qt.RightButton || item.onlyMenu)) {
+                                        const p = trayIcon.mapToItem(null, mouse.x, mouse.y)
+                                        item.display(root, p.x, p.y)
+                                    } else {
+                                        item.activate()
+                                    }
                                 }
+                                onWheel: wheel => trayIcon.modelData.scroll(wheel.angleDelta.y, false)
                             }
                         }
                     }
                 }
             }
 
-            // Temperature
-            Rectangle {
-                color: root.moduleBg
-                height: 30
-                implicitWidth: tempLabel.implicitWidth + 16
-                radius: 4
-
-                Text {
-                    id: tempLabel
-                    anchors.centerIn: parent
-                    text: " " + root.tempText
-                    color: root.fg
-                    font.family: root.monoFont
-                    font.pixelSize: 13
-                }
+            BarModule {
+                icon: ""
+                iconFont: "feather"
+                text: root.tempText
+                topLeftRadius: 8
+                bottomLeftRadius: 8
             }
 
-            // CPU
-            Rectangle {
-                color: root.moduleBg
-                height: 30
-                implicitWidth: cpuLabel.implicitWidth + 16
-                radius: 4
-
-                Text {
-                    id: cpuLabel
-                    anchors.centerIn: parent
-                    text: " " + root.cpuText + "%"
-                    color: root.fg
-                    font.family: root.monoFont
-                    font.pixelSize: 13
-                }
+            BarModule {
+                icon: ""
+                text: root.cpuText
             }
 
-            // Memory
-            Rectangle {
-                color: root.moduleBg
-                height: 30
-                implicitWidth: memLabel.implicitWidth + 16
-                radius: 4
-
-                Text {
-                    id: memLabel
-                    anchors.centerIn: parent
-                    text: " " + root.memText
-                    color: root.fg
-                    font.family: root.monoFont
-                    font.pixelSize: 13
-                }
+            BarModule {
+                icon: ""
+                iconFont: "feather"
+                text: root.memText
             }
 
-            // Network
-            Rectangle {
-                color: root.moduleBg
-                height: 30
-                implicitWidth: netLabel.implicitWidth + 16
-                radius: 4
-
-                Text {
-                    id: netLabel
-                    anchors.centerIn: parent
-                    text: " " + root.netText
-                    color: root.fg
-                    font.family: root.monoFont
-                    font.pixelSize: 13
-                }
+            BarModule {
+                text: root.netText
             }
 
-            // Volume (PipeWire)
-            Rectangle {
-                id: volModule
-                color: root.moduleBg
-                height: 30
-                implicitWidth: volLabel.implicitWidth + 16
-                radius: 4
+            BarModule {
+                readonly property bool muted: root.sink?.audio?.muted ?? false
+                readonly property int volume: Math.round((root.sink?.audio?.volume ?? 0) * 100)
 
-                readonly property var  sink:     Pipewire.defaultAudioSink
-                readonly property real vol:      sink && sink.audio ? sink.audio.volume : 0
-                readonly property bool isMuted:  sink && sink.audio ? sink.audio.muted  : false
-
-                readonly property string volIcon: {
-                    if (isMuted || vol <= 0) return ""
-                    if (vol < 0.34)          return ""
-                    if (vol < 0.67)          return ""
-                    return ""
-                }
-
-                Text {
-                    id: volLabel
-                    anchors.centerIn: parent
-                    text: volModule.isMuted
-                          ? " Muted"
-                          : (volModule.volIcon + " " + Math.round(volModule.vol * 100) + "%")
-                    color: volModule.isMuted ? root.urgentColor : root.fg
-                    font.family: root.monoFont
-                    font.pixelSize: 13
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    acceptedButtons: Qt.LeftButton
-                    onClicked: {
-                        if (volModule.sink && volModule.sink.audio)
-                            volModule.sink.audio.muted = !volModule.sink.audio.muted
-                    }
-                    onWheel: wheel => {
-                        if (volModule.sink && volModule.sink.audio) {
-                            var delta = wheel.angleDelta.y > 0 ? 0.05 : -0.05
-                            volModule.sink.audio.volume =
-                                Math.max(0, Math.min(1.5, volModule.sink.audio.volume + delta))
-                        }
-                    }
+                visible: root.sink !== null
+                icon: muted ? "" : volume < 34 ? "" : volume < 67 ? "" : ""
+                iconFont: "feather"
+                iconColor: muted ? root.urgent : root.accent
+                text: muted ? "Muted" : volume + "%"
+                onClicked: Quickshell.execDetached(["pavucontrol"])
+                onScrolled: wheel => {
+                    const audio = root.sink?.audio
+                    if (!audio) return
+                    const step = wheel.angleDelta.y > 0 ? 0.05 : -0.05
+                    audio.volume = Math.max(0, Math.min(1, audio.volume + step))
                 }
             }
         }

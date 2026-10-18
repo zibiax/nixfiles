@@ -1,30 +1,34 @@
+//@ pragma IconTheme Papirus-Dark
 import Quickshell
 import Quickshell.Io
 
+// Stand-in for waybar + rofi. Run with `qs`, then bind in hyprland.lua:
+//   hl.bind("SUPER + SPACE", hl.dsp.exec_cmd("qs ipc call launcher toggle"))
+//   hl.bind("SUPER + SHIFT + SPACE", hl.dsp.exec_cmd("qs ipc call powermenu toggle"))
 ShellRoot {
     Bar {}
 
     Launcher {
         id: launcher
-        visible: false
     }
 
     PowerMenu {
         id: powerMenu
-        visible: false
     }
 
     IpcHandler {
         target: "launcher"
-        function handle(message) {
-            launcher.visible = !launcher.visible
+        function toggle(): void {
+            powerMenu.visible = false
+            launcher.toggle()
         }
     }
 
     IpcHandler {
         target: "powermenu"
-        function handle(message) {
-            powerMenu.visible = !powerMenu.visible
+        function toggle(): void {
+            launcher.visible = false
+            powerMenu.toggle()
         }
     }
 }

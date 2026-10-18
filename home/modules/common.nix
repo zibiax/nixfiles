@@ -54,8 +54,16 @@ in
       ignoreAllDups = true;
       ignoreDups = true;
       saveNoDups = true;
-      share = false;
+      # Match the Arch setup, where oh-my-zsh's lib turned these on.
+      share = true;
+      extended = true;
+      ignoreSpace = true;
     };
+
+    # Only oh-my-zsh's lib (no theme or plugins), as `zgenom ohmyzsh` loaded
+    # it on Arch: directory aliases (..., -, 1-9), auto_pushd, key bindings,
+    # completion menu, terminal title.
+    oh-my-zsh.enable = true;
 
     plugins = [
       (zshPlugin "fzf-tab" pkgs.zsh-fzf-tab "share/fzf-tab" "fzf-tab.plugin.zsh")
@@ -99,7 +107,7 @@ in
       source ${../../modules/zsh/functions.zsh}
       source ${../../modules/zsh/keybinds-late.zsh}
 
-      # Prompt (was provided by oh-my-zsh's prompt_subst before)
+      # Prompt
       setopt PROMPT_SUBST
       git_branch() {
         local branch_name

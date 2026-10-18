@@ -1,162 +1,237 @@
 import Quickshell
+import Quickshell.Hyprland
+import Quickshell.Io
+import Quickshell.Wayland
 import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
 
-// App launcher – triggered via: qs ipc call launcher
-// Hyprland bind: bind = SUPER, SPACE, exec, qs ipc call launcher
-FloatingWindow {
+// Port of rofi/config.rasi (drun) with the tokyonight rofi theme.
+// Toggle: qs ipc call launcher toggle
+PanelWindow {
     id: root
 
-    // Centre on the primary screen
-    x: screen ? screen.x + Math.round((screen.width  - width)  / 2) : 1445
-    y: screen ? screen.y + Math.round((screen.height - height) / 2) : 530
+    visible: false
+    // Full-screen and transparent so a click outside the box closes it,
+    // like rofi's click-to-exit.
+    anchors {
+        top: true
+        bottom: true
+        left: true
+        right: true
+    }
+    // Stay clear of the bar, so centring matches rofi's (work area, not screen).
+    exclusiveZone: 0
+    color: "transparent"
+    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.namespace: "quickshell-launcher"
+    WlrLayershell.keyboardFocus: visible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
-    width:  550
-    height: 400
-    color:  "#1a1b26"
+    // tokyonight.rasi
+    readonly property color background: "#15161e"
+    readonly property color foreground: "#c0caf5"
+    readonly property color accent: "#7aa2f7"
+    readonly property color selected: "#7aa2f7"
+    readonly property string font: "SpaceMono Nerd Font"
 
-    onVisibleChanged: {
-        if (visible) {
-            searchInput.text = ""
-            searchInput.forceActiveFocus()
+    function toggle() {
+        if (!visible) {
+            screen = Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) ?? Quickshell.screens[0]
+            search.text = ""
+            list.currentIndex = 0
         }
+        visible = !visible
+    }
+    onVisibleChanged: if (visible) search.forceActiveFocus()
+
+    // rofi's drun history, shared with rofi: "<count> <id>.desktop" per line.
+    FileView {
+        id: historyFile
+        path: Quickshell.env("HOME") + "/.cache/rofi3.druncache"
+        watchChanges: true
+        onFileChanged: reload()
+    }
+    // The file is kept sorted by count; equal counts keep their order.
+    readonly property var history: {
+        const ids = []
+        const counts = {}
+        for (const line of historyFile.text().split("\n")) {
+            const m = line.match(/^(\d+) (.+)\.desktop$/)
+            if (m) {
+                ids.push(m[2])
+                counts[m[2]] = Number(m[1])
+            }
+        }
+        return { ids: ids, counts: counts }
+    }
+    function recordLaunch(entry) {
+        const counts = Object.assign({}, history.counts)
+        const ids = history.ids.includes(entry.id) ? history.ids.slice() : history.ids.concat(entry.id)
+        counts[entry.id] = (counts[entry.id] || 0) + 1
+        ids.sort((a, b) => counts[b] - counts[a])
+        historyFile.setText(ids.map(id => counts[id] + " " + id + ".desktop").join("\n") + "\n")
     }
 
-    // ── Filtered app list ─────────────────────────────────────────────
-    property var filteredApps: {
-        var search = searchInput.text.toLowerCase().trim()
-        var all = DesktopEntries.applications.values || []
-        var visible = all.filter(a => !a.noDisplay)
-        if (search.length === 0)
-            return visible.sort((a, b) => a.name.localeCompare(b.name))
-        return visible.filter(a => {
-            var name     = a.name.toLowerCase()
-            var generic  = (a.genericName || "").toLowerCase()
-            var keywords = (a.keywords || []).join(" ").toLowerCase()
-            return name.includes(search) ||
-                   generic.includes(search) ||
-                   keywords.includes(search)
-        }).sort((a, b) => a.name.localeCompare(b.name))
+    // rofi's default "normal" matching: every word must appear somewhere.
+    // History order first, then alphabetical, like rofi with history on.
+    readonly property var apps: {
+        const words = search.text.toLowerCase().split(/\s+/).filter(w => w.length > 0)
+        const rank = id => {
+            const i = history.ids.indexOf(id)
+            return i < 0 ? Infinity : i
+        }
+        return DesktopEntries.applications.values
+            .filter(a => !a.noDisplay)
+            .filter(a => {
+                const hay = [a.name, a.genericName, ...(a.keywords || [])].join(" ").toLowerCase()
+                return words.every(w => hay.includes(w))
+            })
+            .sort((a, b) => rank(a.id) - rank(b.id) || a.name.localeCompare(b.name))
     }
 
-    // ── Global keys ───────────────────────────────────────────────────
-    Keys.onEscapePressed: root.visible = false
+    function launch(index) {
+        if (index < 0 || index >= apps.length) return
+        const entry = apps[index]
+        // execute() ignores Terminal=true; rofi runs those in its terminal.
+        if (entry.runInTerminal)
+            Quickshell.execDetached({
+                command: ["kitty", "-e"].concat(Array.from(entry.command)),
+                workingDirectory: entry.workingDirectory
+            })
+        else
+            entry.execute()
+        recordLaunch(entry)
+        visible = false
+    }
 
-    // ── UI ────────────────────────────────────────────────────────────
-    ColumnLayout {
+    MouseArea {
         anchors.fill: parent
-        anchors.margins: 16
-        spacing: 10
+        onClicked: root.visible = false
+    }
 
-        // Search bar
-        Rectangle {
-            Layout.fillWidth: true
-            height: 40
-            color: "#1e2030"
-            radius: 6
-            border.color: searchInput.activeFocus ? "#7aa2f7" : "#282a3a"
-            border.width: 2
+    // window { width: 550px; height: 360px; }
+    Rectangle {
+        anchors.centerIn: parent
+        width: 550
+        height: 360
+        color: root.background
+        clip: true
 
-            RowLayout {
-                anchors {
-                    fill: parent
-                    leftMargin: 12
-                    rightMargin: 12
-                }
-                spacing: 8
+        MouseArea { anchors.fill: parent } // swallow clicks inside
+
+        // inputbar { padding: 5px; children: [prompt, entry]; }
+        Item {
+            id: inputbar
+            x: 5
+            y: 5
+            width: parent.width - 10
+            height: prompt.y + prompt.height
+
+            // prompt { margin: 20px 0 0 20px; padding: 6px; border-radius: 4px; }
+            Rectangle {
+                id: prompt
+                x: 20
+                y: 20
+                width: promptText.implicitWidth + 12
+                height: promptText.implicitHeight + 12
+                radius: 4
+                color: root.accent
 
                 Text {
-                    text: "  Apps "
-                    color: "#7aa2f7"
-                    font.family: "SpaceMono Nerd Font"
-                    font.pixelSize: 13
-                    font.bold: true
+                    id: promptText
+                    anchors.centerIn: parent
+                    text: "   Apps "
+                    color: root.background
+                    font.family: root.font
+                    font.pointSize: 13
                 }
+            }
 
-                TextInput {
-                    id: searchInput
-                    Layout.fillWidth: true
-                    color: "#c0caf5"
-                    font.family: "SpaceMono Nerd Font"
-                    font.pixelSize: 13
-                    verticalAlignment: TextInput.AlignVCenter
-                    focus: true
-                    height: parent.height
-                    clip: true
+            // entry { margin: 20px 0 0 10px; padding: 6px; }
+            TextInput {
+                id: search
+                x: prompt.x + prompt.width + 10 + 6
+                anchors.verticalCenter: prompt.verticalCenter
+                width: inputbar.width - x - 6
+                color: root.foreground
+                selectionColor: root.accent
+                font.family: root.font
+                font.pointSize: 13
+                focus: root.visible
+                clip: true
 
-                    Keys.onDownPressed:  appList.currentIndex = Math.min(appList.currentIndex + 1, appList.count - 1)
-                    Keys.onUpPressed:    appList.currentIndex = Math.max(appList.currentIndex - 1, 0)
-                    Keys.onReturnPressed: {
-                        if (appList.currentIndex >= 0 && appList.currentIndex < root.filteredApps.length) {
-                            root.filteredApps[appList.currentIndex].execute()
-                            root.visible = false
-                        }
-                    }
-                }
+                Keys.onEscapePressed: root.visible = false
+                Keys.onReturnPressed: root.launch(list.currentIndex)
+                Keys.onEnterPressed: root.launch(list.currentIndex)
+                Keys.onDownPressed: list.currentIndex = Math.min(list.currentIndex + 1, list.count - 1)
+                Keys.onUpPressed: list.currentIndex = Math.max(list.currentIndex - 1, 0)
+                Keys.onTabPressed: list.currentIndex = (list.currentIndex + 1) % Math.max(list.count, 1)
+                Keys.onBacktabPressed: list.currentIndex = (list.currentIndex - 1 + list.count) % Math.max(list.count, 1)
+                onTextChanged: list.currentIndex = 0
             }
         }
 
-        // App list
-        ScrollView {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            clip: true
-            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+        // listview { margin: 10px 0 0 20px; padding: 6px 0 0; columns: 2; }
+        // rofi fills the first column top to bottom, then the second.
+        GridView {
+            id: list
+            anchors {
+                top: inputbar.bottom
+                left: parent.left
+                right: parent.right
+                bottom: parent.bottom
+                topMargin: 5 + 10 + 6 + 2 // inputbar padding + listview margin/padding
+                leftMargin: 20
+            }
+            model: root.apps
+            cellWidth: width / 2
+            cellHeight: 36
+            flow: GridView.FlowTopToBottom
+            interactive: true
+            highlightFollowsCurrentItem: false
+            boundsBehavior: Flickable.StopAtBounds
 
-            ListView {
-                id: appList
-                model: root.filteredApps
-                currentIndex: 0
-                spacing: 2
+            onCurrentIndexChanged: positionViewAtIndex(currentIndex, GridView.Contain)
 
-                onModelChanged: currentIndex = 0
+            // element { padding: 4px; } element-icon { size: 24px; }
+            // element selected { background-color: @background; text-color: @selected; }
+            delegate: Item {
+                id: entry
+                required property var modelData
+                required property int index
+                readonly property bool isCurrent: GridView.isCurrentItem
 
-                delegate: Rectangle {
-                    required property var modelData
-                    required property int index
+                width: list.cellWidth
+                height: list.cellHeight
 
-                    width:  ListView.view.width
-                    height: 44
-                    color:  ListView.isCurrentItem ? "#1e2030" : "transparent"
-                    radius: 4
+                Row {
+                    anchors {
+                        fill: parent
+                        margins: 4
+                    }
+                    spacing: 1
 
-                    RowLayout {
-                        anchors { fill: parent; leftMargin: 8; rightMargin: 8 }
-                        spacing: 10
-
-                        Image {
-                            width:  24
-                            height: 24
-                            Layout.alignment: Qt.AlignVCenter
-                            source: {
-                                var icon = modelData.icon || ""
-                                if (icon.length === 0) return ""
-                                if (icon.startsWith("/") || icon.startsWith("file://"))
-                                    return icon
-                                return Quickshell.iconPath(icon) || ""
-                            }
-                            fillMode: Image.PreserveAspectFit
-                            smooth: true
-                        }
-
-                        Text {
-                            Layout.fillWidth: true
-                            text:  modelData.name
-                            color: parent.parent.ListView.isCurrentItem ? "#7aa2f7" : "#c0caf5"
-                            font.family:  "SpaceMono Nerd Font"
-                            font.pixelSize: 13
-                            elide: Text.ElideRight
-                        }
+                    Image {
+                        width: 24
+                        height: 24
+                        anchors.verticalCenter: parent.verticalCenter
+                        source: Quickshell.iconPath(entry.modelData.icon, "application-x-executable")
+                        sourceSize: Qt.size(24, 24)
+                        smooth: true
                     }
 
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: {
-                            root.filteredApps[index].execute()
-                            root.visible = false
-                        }
+                    Text {
+                        width: parent.width - 25
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: entry.modelData.name
+                        color: entry.isCurrent ? root.selected : root.foreground
+                        font.family: root.font
+                        font.pointSize: 13
+                        elide: Text.ElideRight
                     }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: root.launch(entry.index)
                 }
             }
         }
