@@ -56,10 +56,10 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("signal-desktop")
 end)
 
--- Old plain "exec" (relaunch.sh restarts waybar/swaybg -- both once at cold
+-- Old plain "exec" (relaunch.sh restarts quickshell/swaybg -- both once at cold
 -- boot AND on every subsequent reload). A bare top-level call runs while the
 -- config is still being parsed, before the Wayland socket is ready for a
--- client like waybar to connect -- that's what caused it to be missing on
+-- client like the bar to connect -- that's what caused it to be missing on
 -- fresh launch until a manual reload. Firing it from both lifecycle events
 -- instead means it's reliable at boot AND still restarts on reload/theme
 -- changes, matching the original intent.
@@ -306,7 +306,7 @@ end
 ---- KEYBINDINGS ----
 ---------------------
 -- SUPER CTRL, V — Clipboard manager
-hl.bind("SUPER + CTRL + V", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.local/scripts/rofi-cliphist.sh"))
+hl.bind("SUPER + CTRL + V", hl.dsp.exec_cmd("qs ipc call clipboard toggle"))
 
 -- Media keys (mpc)
 hl.bind("SUPER + SHIFT + N", hl.dsp.exec_cmd("mpc next"))
@@ -325,8 +325,8 @@ hl.bind("SUPER + N", hl.dsp.exec_cmd("thunar"))
 hl.bind("SUPER + RETURN", hl.dsp.exec_cmd("ghostty"))
 hl.bind("SUPER + B", hl.dsp.exec_cmd("librewolf"))
 hl.bind("SUPER + W", hl.dsp.exec_cmd("vesktop"))
-hl.bind("SUPER + SPACE", hl.dsp.exec_cmd("pkill rofi || rofi -show drun"))
-hl.bind("SUPER + SHIFT + SPACE", hl.dsp.exec_cmd("pkill rofi || ~/.config/rofi/powermenu/powermenu.sh"))
+hl.bind("SUPER + SPACE", hl.dsp.exec_cmd("qs ipc call launcher toggle"))
+hl.bind("SUPER + SHIFT + SPACE", hl.dsp.exec_cmd("qs ipc call powermenu toggle"))
 -- VERIFY: no confirmed native "reload" dispatcher in the docs I could check;
 -- shelling out to hyprctl still works fine.
 hl.bind("SUPER + SHIFT + R", hl.dsp.exec_cmd("hyprctl reload"))

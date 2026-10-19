@@ -18,7 +18,6 @@ in
     "waybar"
     "nvim"
     "tmux"
-    "rofi"
     "ghostty"
     "alacritty"
     "kitty"
@@ -42,7 +41,7 @@ in
     ".local/scripts".source = link "modules/scripts/local";
     "bin".source = link "modules/scripts/bin";
     "Pictures/Wallpapers".source = link "wallpapers";
-    # Icon font used by waybar, the rofi power menu and quickshell.
+    # Icon font used by waybar and quickshell.
     ".local/share/fonts/Feather.ttf".source = ../../modules/fonts/Feather.ttf;
   };
 
@@ -134,7 +133,6 @@ in
     # --- hyprland session
     waybar
     quickshell
-    rofi
     rofimoji
     wofi
     dunst

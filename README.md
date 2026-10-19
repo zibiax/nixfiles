@@ -11,7 +11,7 @@ The scope of this project is to create a portable config for NixOS, and MacOS. F
 | `hosts/nixos/hardware/desktop.nix` | Hardware config — **replace with the generated one when installing** |
 | `home/modules/common.nix` | Home Manager config for every host: zsh, git, cli tools |
 | `home/linux/desktop.nix` | Desktop apps, dotfile links, user services (dunst, mpd, polkit agent) |
-| `modules/<app>/` | Raw dotfiles (hypr, waybar, nvim, rofi, tmux, ghostty, …) |
+| `modules/<app>/` | Raw dotfiles (hypr, quickshell, nvim, tmux, ghostty, …) |
 | `modules/scripts/local` | Linked to `~/.local/scripts` |
 | `modules/scripts/bin` | Linked to `~/bin` |
 | `wallpapers/` | Linked to `~/Pictures/Wallpapers` |
