@@ -21,6 +21,8 @@ PanelWindow {
     implicitHeight: 36
     exclusiveZone: 36
     color: "transparent"
+    // Matched by the blur layer rule in hypr/hyprland.{lua,conf}.
+    WlrLayershell.namespace: "quickshell-bar"
 
     readonly property color moduleBg: "#160654"
     readonly property color accent: "#7aa2f7"

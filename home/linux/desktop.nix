@@ -46,14 +46,6 @@ in
     ".local/share/fonts/Feather.ttf".source = ../../modules/fonts/Feather.ttf;
   };
 
-  # packer.nvim isn't managed by itself; bootstrap it like on Arch.
-  home.activation.packer = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    packer="${config.xdg.dataHome}/nvim/site/pack/packer/opt/packer.nvim"
-    if [ ! -d "$packer" ]; then
-      run ${pkgs.git}/bin/git clone --depth 1 https://github.com/wbthomason/packer.nvim "$packer" || true
-    fi
-  '';
-
   # ---------------------------------------------------------------- shell
   programs.zsh = {
     shellAliases = {
@@ -187,13 +179,18 @@ in
     kitty
     foot
     wezterm
-    neovim
+    # Same package as modules/nvim/flake.nix: plugins from nixpkgs, vim.pack
+    # only fetches the few that aren't packaged. configDir is the live link,
+    # not a store copy, so config edits still apply without a rebuild.
+    (callPackage ../../modules/nvim/nix/neovim.nix {
+      configDir = "${config.xdg.configHome}/nvim";
+    })
     zed-editor
     gedit
     meld
     diffuse
 
-    # --- neovim tooling (packer builds/LSPs)
+    # --- neovim tooling (vim.pack builds/LSPs)
     gcc
     gnumake
     cmake

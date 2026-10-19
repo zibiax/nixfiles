@@ -189,6 +189,12 @@ hl.layer_rule({
     blur = true,
 })
 
+hl.layer_rule({
+    name = "blur-quickshell-bar",
+    match = { namespace = "quickshell-bar" },
+    blur = true,
+})
+
 --------------------
 ---- ANIMATIONS ----
 --------------------

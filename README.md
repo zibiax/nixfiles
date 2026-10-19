@@ -87,7 +87,8 @@ Log in on tty1 and Hyprland starts (same as before, via `.zprofile`).
 - Docker stacks run from `~/nixfiles/docker/<stack>`: copy `.env` back into
   `docker/searxng/` and the jellyfin `config/` into `docker/jellyfin/` (both
   gitignored), then `docker compose up -d`.
-- Open nvim and run `:PackerSync` (packer itself is cloned automatically).
+- Open nvim once while online: plugins come from nixpkgs, and vim.pack only
+  fetches the few that aren't packaged (pinned in `modules/nvim/nvim-pack-lock.json`).
   Mason-installed LSPs work through `programs.nix-ld`.
 
 ### What changed compared to Arch

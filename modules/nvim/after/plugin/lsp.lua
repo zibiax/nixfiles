@@ -1,7 +1,12 @@
-require('mason').setup()
-require('mason-lspconfig').setup({
-    ensure_installed = { 'jdtls' },
-})
+-- Mason's prebuilt binaries don't run on NixOS, there servers come from the flake
+if not vim.g.nix then
+    require('mason').setup()
+    require('mason-lspconfig').setup({
+        ensure_installed = { 'jdtls' },
+        -- jdtls is started by nvim-jdtls in ftplugin/java.lua
+        automatic_enable = { exclude = { 'jdtls' } },
+    })
+end
 
 -- Use the new vim.lsp.config API directly (nvim 0.11+)
 vim.lsp.config('pylsp', {
