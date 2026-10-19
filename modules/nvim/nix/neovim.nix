@@ -35,7 +35,6 @@ wrapNeovim neovim-unwrapped {
       trouble-nvim
       catppuccin-nvim
       nvim-treesitter.withAllGrammars
-      playground
       harpoon
       undotree
       vim-fugitive

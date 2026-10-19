@@ -105,10 +105,6 @@
       "rev": "ec309a0eaff6ea967e58c275996155ab5c16938d",
       "src": "https://github.com/nvim-tree/nvim-web-devicons"
     },
-    "playground": {
-      "rev": "ba48c6a62a280eefb7c85725b0915e021a1a0749",
-      "src": "https://github.com/nvim-treesitter/playground"
-    },
     "plenary.nvim": {
       "rev": "74b06c6c75e4eeb3108ec01852001636d85a932b",
       "src": "https://github.com/nvim-lua/plenary.nvim"

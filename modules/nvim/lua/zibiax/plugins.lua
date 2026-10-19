@@ -39,7 +39,6 @@ local plugins = {
     gh('catppuccin/nvim', { name = 'catppuccin' }),
     -- master is the branch with the `nvim-treesitter.configs` API
     gh('nvim-treesitter/nvim-treesitter', { version = 'master' }),
-    gh('nvim-treesitter/playground'),
     gh('theprimeagen/harpoon'),
     gh('mbbill/undotree'),
     gh('tpope/vim-fugitive'),
