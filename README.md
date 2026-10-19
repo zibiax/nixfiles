@@ -37,9 +37,6 @@ upgrade   # git pull (CI's updated flake.lock) + rebuild (replaces paru -Syu)
 drives (`~/media/{Vault,Backup,Big}`) is wiped. Those drives are mounted by
 UUID in `hosts/nixos/desktop.nix` and come back automatically.
 
-`~` is ~520 GB but most of it can be re-downloaded (Steam 123 GB, `~/Games`
-84 GB, `~/.config/rpcs3` 35 GB, `~/.conda` 40 GB, lutris 12 GB, baloo index).
-Must keep:
 
 - [ ] `~/.ssh`, `~/.local/share/gnupg`, `~/.ssh/allowed_signers`
 - [ ] Projects and documents: `~/Dev`, `~/Documents`, `~/Desktop`, `~/Ebooks*`, other repos in `~` (check for unpushed work)
