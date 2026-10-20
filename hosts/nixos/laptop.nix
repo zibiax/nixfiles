@@ -13,7 +13,6 @@
   hardware.bluetooth.enable = true;
   services.fwupd.enable = true;
 
-  services.power-profiles-daemon.enable = true;
   services.tlp = {
     enable = true;
     settings = {
@@ -23,10 +22,10 @@
   };
 
   powerManagement.cpuFreqGovernor = lib.mkDefault "schedutil";
-  services.logind.extraConfig = ''
-    HandleLidSwitchExternalPower=suspend
-    HandleLidSwitchDocked=ignore
-  '';
+  services.logind.settings.Login = {
+    HandleLidSwitchExternalPower = "suspend";
+    HandleLidSwitchDocked = "ignore";
+  };
 
   environment.systemPackages = with pkgs; [
     acpi

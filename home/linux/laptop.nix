@@ -3,6 +3,8 @@
 {
   home.packages = with pkgs; [
     networkmanagerapplet
+    quickshell
+    swaybg
     powertop
     ydotool
   ];
@@ -12,7 +14,6 @@
     package = pkgs.hyprland;
   };
 
-  programs.waybar.enable = true;
   services.mako.enable = true;
 
   home.file.".config/hypr" = {
@@ -20,8 +21,15 @@
     recursive = true;
   };
 
-  home.file.".config/waybar" = {
-    source = ../../modules/waybar;
+  home.file.".config/quickshell" = {
+    source = ../../modules/quickshell;
     recursive = true;
   };
+
+  # relaunch.sh (run by hyprland) starts quickshell and swaybg with a random wallpaper.
+  home.file.".local/scripts".source = ../../modules/scripts/local;
+  home.file."Pictures/Wallpapers".source = ../../wallpapers;
+
+  # Icon font used by quickshell.
+  home.file.".local/share/fonts/Feather.ttf".source = ../../modules/fonts/Feather.ttf;
 }

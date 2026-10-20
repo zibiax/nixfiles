@@ -76,10 +76,6 @@ Log in on tty1 and Hyprland starts (same as before, via `.zprofile`).
 - `exa` → `eza`; paru/pacman aliases → `rebuild`/`upgrade`/`updates`.
 - conda dropped — use `nix shell`, devshells or direnv (`programs.direnv` is on).
 - Polkit agent runs as a systemd user service (`hyprpolkitagent`) instead of `/usr/lib/...` exec lines.
-- Waybar's `custom/pacman` now shows how old the nixpkgs lock is.
-- Plex removed (server, 8443 proxy, client and `plexcron.sh`).
-- Not ported (no nixpkgs package): MATLAB, Etcher, Popcorn Time, JDownloader, t3code, CUDA toolkit (use a devshell).
-- Commented out in `hosts/nixos/desktop.nix`, enable when needed: cloudflared, ollama (CUDA).
 
 ## CachyOS kernel
 

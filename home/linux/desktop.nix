@@ -16,14 +16,12 @@ in
   # ---------------------------------------------------------------- dotfiles
   xdg.configFile = linkConfigs [
     "hypr"
-    "waybar"
     "nvim"
     "tmux"
     "ghostty"
     "alacritty"
     "kitty"
     "foot"
-    "wofi"
     "dunst"
     "mako"
     "btop"
@@ -127,10 +125,8 @@ in
   # ---------------------------------------------------------------- packages
   home.packages = with pkgs; [
     # --- hyprland session
-    waybar
     quickshell
     rofimoji
-    wofi
     dunst
     libnotify
     mako
