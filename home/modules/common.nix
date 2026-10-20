@@ -32,6 +32,11 @@ in
     };
   };
 
+  # Lets `git log --show-signature` verify commits signed with the key above.
+  home.file.".ssh/allowed_signers".text = ''
+    martin@evenbom.se ${config.programs.git.signing.key}
+  '';
+
   programs.gpg = {
     enable = true;
     homedir = "${config.xdg.dataHome}/gnupg";

@@ -71,12 +71,6 @@ in
         nix profile remove "$@" && nix-collect-garbage
       }
     '';
-    # Start Hyprland when logging in on tty1 (same as the Arch .zprofile).
-    profileExtra = ''
-      if [ -z "$WAYLAND_DISPLAY" ] && [ -z "$DISPLAY" ] && [ "$XDG_VTNR" = 1 ]; then
-        if command -v start-hyprland >/dev/null; then exec start-hyprland; else exec Hyprland; fi
-      fi
-    '';
   };
 
   home.sessionVariables = {

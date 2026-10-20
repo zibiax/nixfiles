@@ -67,12 +67,13 @@
     description = "Martin";
     # Samba guests need to traverse ~ to reach ~/media (NixOS defaults to 700).
     homeMode = "755";
-    extraGroups = [ "docker" "vboxusers" "wireshark" "rfkill" "input" "dialout" ];
+    extraGroups = [ "docker" "vboxusers" "wireshark" "rfkill" "input" "dialout" "seat" ];
   };
 
   # ---------------------------------------------------------------- desktop
-  # Hyprland is started from tty1 by ~/.config/zsh/.zprofile (same as on Arch).
+  # Log in with lemurs; it lists the Hyprland session from programs.hyprland.
   programs.hyprland.enable = true;
+  services.displayManager.lemurs.enable = true;
   xdg.portal = {
     enable = true;
     extraPortals = with pkgs; [ xdg-desktop-portal-gtk ];
