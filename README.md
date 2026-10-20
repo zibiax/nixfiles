@@ -31,26 +31,8 @@ upgrade   # git pull (CI's updated flake.lock) + rebuild (replaces paru -Syu)
 
 ## Moving the desktop from EndeavourOS to NixOS
 
-### 1. Back up before formatting the NVMe
 
-`/home` lives on the NVMe, so everything in `~` that isn't on one of the data
-drives (`~/media/{Vault,Backup,Big}`) is wiped. Those drives are mounted by
-UUID in `hosts/nixos/desktop.nix` and come back automatically.
-
-
-- [ ] `~/.ssh`, `~/.local/share/gnupg`, `~/.ssh/allowed_signers`
-- [ ] Projects and documents: `~/Dev`, `~/Documents`, `~/Desktop`, `~/Ebooks*`, other repos in `~` (check for unpushed work)
-- [ ] Anything worth keeping in `~/Downloads` (81 GB)
-- [ ] App state you care about: `~/.config/google-chrome`, `~/.mozilla`, `~/.thunderbird`, `~/.config/Signal`, `~/.config/vesktop`, `~/.local/share/PrismLauncher`, emulator saves (rpcs3/pcsx2/ppsspp)
-- [ ] `~/searxng/.env` (Caddy auth hash + hostname) and `~/searxng/searxng/settings.yml` secret key
-- [ ] Jellyfin data: `/opt/jellyfin/docker/config`
-- [ ] MariaDB: `sudo mariadb-dump --all-databases > all.sql`
-- [ ] MongoDB: `mongodump` (MongoDB moves to docker, see `hosts/nixos/desktop.nix`)
-- [ ] Docker volumes you need (`docker volume ls` — searxng, caddy, valkey)
-- [ ] Cloudflare tunnel token (`systemctl cat cloudflared`)
-- [ ] Commit/push this repo, `~/bin` (zibiax/bin), nvim (zibiax/nvim-config) and waybar (zibiax/waybar-config)
-
-### 2. Install
+### 1. Install
 
 From the NixOS installer ISO:
 
@@ -76,7 +58,7 @@ reboot
 
 Log in on tty1 and Hyprland starts (same as before, via `.zprofile`).
 
-### 3. After first boot
+### 2. After first boot
 
 - Restore the backup into `~`.
 - `sudo smbpasswd -a martin` (samba share of `~/media`)
@@ -111,45 +93,3 @@ desktop config, by hand, and every Monday. Monday runs and manual runs with
 only after the whole system has built. Don't update the lock locally, or the
 desktop will compile whatever CI hasn't built yet.
 
-One-time setup:
-
-1. Create a public cache on [cachix.org](https://app.cachix.org) (named
-   `zibiax`, or set the repo variable `CACHIX_CACHE` and update `desktop.nix`).
-2. Add an auth token for it as the repo secret `CACHIX_AUTH_TOKEN`.
-3. Put the cache's public key into `nix.settings.extra-trusted-public-keys` in
-   `hosts/nixos/desktop.nix`.
-
-Updating: wait for the workflow to go green, then `upgrade` (pulls, then
-rebuilds). Check `uname -r` after rebooting. If a rebuild starts compiling
-`linux-...-cachyos`, the lock is ahead of the cache. Pull again or wait for CI.
-
-## Secrets with agenix
-
-SSH private keys (and other sensitive files) are deployed via [agenix](https://github.com/ryantm/agenix). To reuse an existing key without leaking it:
-
-1. Generate an age identity per host. For NixOS machines you can reuse the host SSH key (`ssh-keyscan` is enough). For example:
-   ```bash
-   sudo cat /etc/ssh/ssh_host_ed25519_key.pub
-   ```
-   Copy the resulting public key into `secrets/age-recipients.nix` (see below).
-
-2. Create `secrets/age-recipients.nix` describing which hosts may decrypt the secret:
-   ```nix
-   { "ssh/id_ed25519" = [
-       # desktop host
-       "age1...desktop-public-key"
-       # laptop host
-       "age1...laptop-public-key"
-     ];
-   }
-   ```
-
-3. Encrypt the key with agenix (install it via `nix shell .#agenix` or `nix run .#agenix -- --help`):
-   ```bash
-   agenix -e secrets/ssh/id_ed25519
-   ```
-   This reads `secrets/age-recipients.nix` and produces `secrets/ssh/id_ed25519.age`. The raw private key is never committed.
-
-4. Ensure the original plain-text key is deleted (`shred` if on spinning disks) once the encryption is confirmed.
-
-On rebuild, any NixOS host whose public key is listed will place the decrypted key at `~/.ssh/id_ed25519` with the correct permissions. macOS machines can use the same secret after you create an age identity at `~/.config/age/keys.txt` and add its public part to `secrets/age-recipients.nix`.
