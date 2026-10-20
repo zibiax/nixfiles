@@ -318,11 +318,8 @@ in
     librewolf
     chromium
     google-chrome
-    vivaldi
-    thunderbird
     signal-desktop
     vesktop
-    chatterino2
     zoom-us
     protonmail-bridge
     proton-vpn

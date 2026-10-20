@@ -187,30 +187,6 @@
     package = pkgs.mariadb;
   };
 
-  # MongoDB builds from source in nixpkgs (hours); run it in docker instead:
-  #   docker run -d --name mongo --restart unless-stopped -p 27017:27017 -v mongo:/data/db mongo
-
-  # Cloudflare tunnel (token-based on Arch). Put `TUNNEL_TOKEN=...` in
-  # /etc/cloudflared/token.env (or an agenix secret) and uncomment:
-  # systemd.services.cloudflared = {
-  #   after = [ "network-online.target" ];
-  #   wants = [ "network-online.target" ];
-  #   wantedBy = [ "multi-user.target" ];
-  #   serviceConfig = {
-  #     ExecStart = "${pkgs.cloudflared}/bin/cloudflared --no-autoupdate tunnel run";
-  #     EnvironmentFile = "/etc/cloudflared/token.env";
-  #     DynamicUser = true;
-  #     Restart = "on-failure";
-  #   };
-  # };
-
-  # Ollama was installed but inactive on Arch. ollama-cuda is not in the
-  # default binary cache, so enabling this compiles CUDA bits locally.
-  # services.ollama = {
-  #   enable = true;
-  #   package = pkgs.ollama-cuda;
-  # };
-
   # ---------------------------------------------------------------- misc programs
   programs.wireshark = {
     enable = true;
