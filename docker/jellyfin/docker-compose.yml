@@ -19,8 +19,9 @@ services:
       resources:
         reservations:
           devices:
-            - driver: nvidia
-              count: 1
+            # NixOS's nvidia-container-toolkit only provides CDI, not the "nvidia" runtime
+            - driver: cdi
+              device_ids: [nvidia.com/gpu=all]
               capabilities: [gpu]
 
 networks:

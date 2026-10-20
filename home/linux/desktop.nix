@@ -1,5 +1,6 @@
 { config, pkgs, lib, user, ... }:
 
+
 let
   # Configs are symlinked straight to the checkout (not copied to the store),
   # so edits in ~/.config/<app> land in the repo and apply without a rebuild.
@@ -89,6 +90,7 @@ in
     _JAVA_OPTIONS = "-Djava.util.prefs.userRoot=${config.xdg.configHome}/java";
     ANDROID_HOME = "${config.xdg.dataHome}/android";
   };
+
 
   # ---------------------------------------------------------------- theming
   home.pointerCursor = {

@@ -81,6 +81,9 @@
   security.polkit.enable = true;
   security.pam.services.hyprlock = { };
   services.gnome.gnome-keyring.enable = true;
+  # gnome-keyring turns on gcr's ssh-agent, which takes over SSH_AUTH_SOCK.
+  # Keys come from Proton Pass into the plain ssh-agent started by Hyprland.
+  services.gnome.gcr-ssh-agent.enable = false;
   services.gvfs.enable = true;
   services.tumbler.enable = true;
   services.udisks2.enable = true;
@@ -152,6 +155,8 @@
 
   # ---------------------------------------------------------------- servers
   services.openssh.enable = true;
+  programs.ssh.knownHosts."github.com".publicKey =
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl";
 
   # Share ~/media. Set the samba password once with: sudo smbpasswd -a ${user}
   services.samba = {
