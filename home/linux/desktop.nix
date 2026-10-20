@@ -217,6 +217,7 @@ in
     tmuxp
     lazygit
     lazydocker
+    fastfetch
     gh
     glab
     git-crypt
