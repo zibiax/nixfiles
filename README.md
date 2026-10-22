@@ -10,7 +10,7 @@ The scope of this project is to create a portable config for NixOS, and MacOS. F
 | `hosts/nixos/desktop.nix` | System config for the main desktop (`martin-linux`: Ryzen 7 5700X, RTX 2060) |
 | `hosts/nixos/hardware/desktop.nix` | Hardware config — **replace with the generated one when installing** |
 | `home/modules/common.nix` | Home Manager config for every host: zsh, git, cli tools |
-| `home/linux/desktop.nix` | Desktop apps, dotfile links, user services (dunst, mpd, polkit agent) |
+| `home/linux/desktop.nix` | Desktop apps, dotfile links, user services (dunst, polkit agent) |
 | `modules/<app>/` | Raw dotfiles (hypr, quickshell, nvim, tmux, ghostty, …) |
 | `modules/scripts/local` | Linked to `~/.local/scripts` |
 | `modules/scripts/bin` | Linked to `~/bin` |

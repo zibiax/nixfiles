@@ -4,6 +4,8 @@
   imports = [ ./hardware/desktop.nix ];
 
   networking.hostName = "martin-linux";
+  # Cloudflare DNS for every connection, instead of what DHCP/the router hands out.
+  networking.networkmanager.settings."global-dns-domain-*".servers = "1.1.1.1,1.0.0.1";
 
   # ---------------------------------------------------------------- boot
   boot.loader.systemd-boot = {
@@ -61,6 +63,9 @@
     powerManagement.enable = true; # keeps VRAM across suspend
     package = config.boot.kernelPackages.nvidiaPackages.stable;
   };
+  # GPU tuning (undervolt via clock offset + max clock lock); the daemon
+  # reapplies the settings saved in the GUI at boot.
+  services.lact.enable = true;
 
   # ---------------------------------------------------------------- user
   users.users.${user} = {
@@ -103,8 +108,18 @@
     alsa.support32Bit = true;
     pulse.enable = true;
     jack.enable = true;
+    # WirePlumber only starts Bluetooth audio for a session on an active seat,
+    # and lemurs sessions have no seat, so A2DP never registered.
+    wireplumber.extraConfig."10-bluez-no-seat" = {
+      "wireplumber.profiles".main."monitor.bluez.seat-monitoring" = "disabled";
+    };
   };
   hardware.bluetooth.enable = true;
+  # The Realtek dongle (0bda:a760, RTL8761B) times out on HCI commands and
+  # resets in a loop when USB autosuspend is on.
+  boot.extraModprobeConfig = ''
+    options btusb enable_autosuspend=n
+  '';
   services.blueman.enable = true;
   services.printing.enable = true;
   services.avahi = {
@@ -122,6 +137,13 @@
   };
   programs.gamemode.enable = true;
   programs.gamescope.enable = true;
+
+  # chiaki-ng discovery broadcasts to the LAN, and the PlayStation answers
+  # from 9302 (PS5) / 987 (PS4) to a random port. A reply to a broadcast
+  # isn't matched by conntrack, so accept it explicitly.
+  networking.firewall.extraCommands = ''
+    iptables -I nixos-fw -s 192.168.0.0/24 -p udp -m multiport --sports 987,9302 -j nixos-fw-accept
+  '';
 
   # ---------------------------------------------------------------- virtualisation
   virtualisation.docker.enable = true;

@@ -1,20 +1,37 @@
+# Every container mounts ~/media at the same /media path, so qBittorrent and
+# the *arrs agree on paths and imports are hardlinks (downloads and the library
+# are both on the Backup drive) instead of copies.
+#
+#   /media/Backup/torrents/{movies,tv,music}  downloads (qBittorrent categories)
+#   /media/Backup/Movies                Radarr root folder
+#   /media/Backup/TV Shows              Sonarr root folder
+#   /media/Backup/Music                 Lidarr root folder
+x-common: &common
+  networks:
+    - media
+  restart: unless-stopped
+
+x-env: &env
+  PUID: 1000
+  PGID: 1000
+  TZ: Europe/Stockholm
+
 services:
   jellyfin:
+    <<: *common
     image: jellyfin/jellyfin:latest
     container_name: jellyfin
-    networks:
-      - media
     environment:
       - PUID=1000
       - PGID=1000
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=all
     volumes:
-      - ./config:/config
+      # The running container's config lives here, not in ./config
+      - /etc/jellyfin/config:/config
       - /home/martin/media:/media
     ports:
       - 8096:8096
-    restart: unless-stopped
     deploy:
       resources:
         reservations:
@@ -23,6 +40,154 @@ services:
             - driver: cdi
               device_ids: [nvidia.com/gpu=all]
               capabilities: [gpu]
+
+  # Download client
+  qbittorrent:
+    <<: *common
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      <<: *env
+      WEBUI_PORT: 8080
+      TORRENTING_PORT: 6881
+    volumes:
+      - ./qbittorrent:/config
+      - /home/martin/media:/media
+    ports:
+      - 8080:8080
+      - 6881:6881
+      - 6881:6881/udp
+
+  # Indexer manager, syncs indexers to Sonarr and Radarr
+  prowlarr:
+    <<: *common
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment: *env
+    volumes:
+      - ./prowlarr:/config
+    ports:
+      - 9696:9696
+
+  # Solves Cloudflare challenges for Prowlarr indexers that need it
+  flaresolverr:
+    <<: *common
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      TZ: Europe/Stockholm
+    ports:
+      - 8191:8191
+
+  # Movies
+  radarr:
+    <<: *common
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment: *env
+    volumes:
+      - ./radarr:/config
+      - /home/martin/media:/media
+    ports:
+      - 7878:7878
+
+  # TV
+  sonarr:
+    <<: *common
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment: *env
+    volumes:
+      - ./sonarr:/config
+      - /home/martin/media:/media
+    ports:
+      - 8989:8989
+
+  # Music
+  lidarr:
+    <<: *common
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    environment: *env
+    volumes:
+      - ./lidarr:/config
+      - /home/martin/media:/media
+    ports:
+      - 8686:8686
+
+  # Subtitles for Sonarr and Radarr
+  bazarr:
+    <<: *common
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment: *env
+    volumes:
+      - ./bazarr:/config
+      - /home/martin/media:/media
+    ports:
+      - 6767:6767
+
+  # Requests (successor to Jellyseerr/Overseerr), runs as uid 1000
+  seerr:
+    <<: *common
+    image: ghcr.io/seerr-team/seerr:latest
+    container_name: seerr
+    init: true
+    environment:
+      TZ: Europe/Stockholm
+    volumes:
+      - ./seerr:/app/config
+    ports:
+      - 5055:5055
+
+  # Watch history for Janitorr (records from when it starts; older history only
+  # via Jellyfin's Playback Reporting plugin). Passwords come from .env.
+  jellystat-db:
+    <<: *common
+    image: postgres:15
+    container_name: jellystat-db
+    user: 1000:1000
+    environment:
+      POSTGRES_DB: jfstat
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${JELLYSTAT_DB_PASSWORD:?set in .env}
+    volumes:
+      - ./jellystat/db:/var/lib/postgresql/data
+
+  jellystat:
+    <<: *common
+    image: cyfershepard/jellystat:latest
+    container_name: jellystat
+    environment:
+      TZ: Europe/Stockholm
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${JELLYSTAT_DB_PASSWORD:?set in .env}
+      POSTGRES_IP: jellystat-db
+      POSTGRES_PORT: 5432
+      JWT_SECRET: ${JELLYSTAT_JWT_SECRET:?set in .env}
+    volumes:
+      - ./jellystat/backup:/app/backend/backup-data
+    ports:
+      - 3000:3000
+    depends_on:
+      - jellystat-db
+
+  # Deletes old, unwatched media through Radarr/Sonarr and lists it in a
+  # "Leaving Soon" collection first. Settings (incl. dry-run) in
+  # ./janitorr/application.yml, which holds API keys and stays out of git.
+  janitorr:
+    <<: *common
+    image: ghcr.io/schaka/janitorr:jvm-stable
+    container_name: janitorr
+    user: 1000:1000
+    mem_limit: 256M # the JVM sizes its heap from this
+    mem_swappiness: 0
+    volumes:
+      - ./janitorr/application.yml:/config/application.yml
+      - ./janitorr/logs:/logs
+      # Same path as the *arrs and Jellyfin, for the Leaving Soon symlinks
+      # and the "still seeding" check
+      - /home/martin/media:/media
 
 networks:
   media:

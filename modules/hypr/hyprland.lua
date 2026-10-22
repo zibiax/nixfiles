@@ -53,7 +53,7 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("steam --start-minimized")
     hl.exec_cmd("qbittorrent")
     hl.exec_cmd("hypridle")
-    hl.exec_cmd("signal-desktop")
+    hl.exec_cmd("signal-desktop --use-tray-icon")
 end)
 
 -- Old plain "exec" (relaunch.sh restarts quickshell/swaybg -- both once at cold
@@ -307,12 +307,6 @@ end
 ---------------------
 -- SUPER CTRL, V — Clipboard manager
 hl.bind("SUPER + CTRL + V", hl.dsp.exec_cmd("qs ipc call clipboard toggle"))
-
--- Media keys (mpc)
-hl.bind("SUPER + SHIFT + N", hl.dsp.exec_cmd("mpc next"))
-hl.bind("SUPER + SHIFT + P", hl.dsp.exec_cmd("mpc prev"))
-hl.bind("SUPER + I", hl.dsp.exec_cmd("mpc toggle"))
--- hl.bind("SUPER + SHIFT + K", hl.dsp.exec_cmd("mpc pause"))
 
 -- Screenshots
 local scriptDir = os.getenv("HOME") .. "/.local/scripts/screenshot-wayland-local.sh"

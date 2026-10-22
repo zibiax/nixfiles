@@ -25,8 +25,6 @@ in
     "dunst"
     "mako"
     "btop"
-    "mpd"
-    "ncmpcpp"
     "lazygit"
     "mpv"
     "qt6ct"
@@ -50,7 +48,7 @@ in
       rebuild = "sudo nixos-rebuild switch --flake ${repo}#desktop";
       # CI (.github/workflows/kernel.yml) updates flake.lock once everything is
       # built and in Cachix, so upgrading is just pulling its lock.
-      upgrade = "git -C ${repo} pull --rebase && sudo nixos-rebuild switch --flake ${repo}#desktop";
+      upgrade = "git -C ${repo} pull --rebase --autostash && sudo nixos-rebuild switch --flake ${repo}#desktop";
       updates = "nix flake update --flake ${repo} --output-lock-file /tmp/flake.lock.new && diff <(jq -S .nodes ${repo}/flake.lock) <(jq -S .nodes /tmp/flake.lock.new)";
       tmux-save = "~/bin/tmux-script.sh save";
       tmux-restore = "~/bin/tmux-script.sh restore";
@@ -109,18 +107,6 @@ in
     Install.WantedBy = [ "graphical-session.target" ];
   };
 
-  # mpd reads ~/.config/mpd/mpd.conf (linked from the repo)
-  systemd.user.services.mpd = {
-    Unit = {
-      Description = "Music Player Daemon";
-      After = [ "network.target" "sound.target" ];
-    };
-    Service = {
-      ExecStart = "${pkgs.mpd}/bin/mpd --no-daemon";
-      Restart = "on-failure";
-    };
-    Install.WantedBy = [ "default.target" ];
-  };
 
   # ---------------------------------------------------------------- packages
   home.packages = with pkgs; [
@@ -262,9 +248,6 @@ in
     pciutils
     lm_sensors
     android-tools
-    mpc
-    ncmpcpp
-    mpd
     spotifyd
     claude-code
 

@@ -32,12 +32,14 @@ PanelWindow {
     readonly property string hwmonPath: "/sys/devices/pci0000:00/0000:00:18.3/hwmon/hwmon*/temp1_input"
 
     property string cpuText: ""
+    property string gpuText: ""
     property string memText: ""
     property string tempText: ""
     property string netText: ""
     property string kernelText: ""
-    property string packagesText: ""
-    property string mpdText: ""
+    // check-updates.sh output, see the script for the fields
+    property var updates: null
+    readonly property int updateCount: updates ? updates.inputs.length + (updates.rebuild ? 1 : 0) : 0
     property bool clockAlt: false
 
     // hyprland.lua only accepts Lua dispatchers ("hl.dsp.focus(...)"); the
@@ -58,11 +60,36 @@ PanelWindow {
         precision: SystemClock.Seconds
     }
 
-    // ── CPU: waybar's bare "{}" is the 1-minute load average ──────────
+    // ── CPU: busy share of all threads since the previous poll ───────
+    property var cpuPrev: null
     Process {
         id: cpuProc
-        command: ["cat", "/proc/loadavg"]
-        stdout: SplitParser { onRead: line => root.cpuText = Number(line.split(" ")[0]) + "%" }
+        command: ["head", "-n1", "/proc/stat"]
+        stdout: SplitParser {
+            onRead: line => {
+                // cpu user nice system idle iowait irq softirq steal (guest is already in user)
+                const f = line.trim().split(/\s+/).slice(1, 9).map(Number)
+                const total = f.reduce((a, b) => a + b, 0)
+                const idle = f[3] + f[4]
+                const prev = root.cpuPrev
+                root.cpuPrev = { total, idle }
+                if (prev && total > prev.total)
+                    root.cpuText = Math.round(100 * (1 - (idle - prev.idle) / (total - prev.total))) + "%"
+            }
+        }
+    }
+
+    // ── GPU: temperature and utilisation; hidden without nvidia-smi ──
+    Process {
+        id: gpuProc
+        command: ["nvidia-smi", "--query-gpu=temperature.gpu,utilization.gpu", "--format=csv,noheader,nounits"]
+        stdout: SplitParser {
+            onRead: line => {
+                const [temp, util] = line.split(",").map(v => v.trim())
+                root.gpuText = temp + "°C " + util + "%"
+            }
+        }
+        onExited: code => { if (code !== 0) root.gpuText = "" }
     }
 
     // ── Memory: (MemTotal - MemAvailable) in GiB ──────────────────────
@@ -94,6 +121,7 @@ PanelWindow {
         triggeredOnStart: true
         onTriggered: {
             root.poll(cpuProc)
+            root.poll(gpuProc)
             root.poll(memProc)
             root.poll(tempProc)
         }
@@ -123,79 +151,177 @@ PanelWindow {
         stdout: SplitParser { onRead: line => root.kernelText = line.trim() }
     }
 
-    // ── nixpkgs lock age, same script as waybar's custom/pacman ───────
+    // ── Updates: GitHub's flake.lock (bumped by CI) vs the checkout ───
     Process {
         id: pkgProc
-        command: ["sh", "-c", "$HOME/.config/waybar/scripts/package-updates.sh"]
-        stdout: SplitParser { onRead: line => root.packagesText = line.trim() }
+        command: ["sh", "-c", "$HOME/.local/scripts/check-updates.sh"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const u = JSON.parse(text)
+                    root.updates = u.error ? null : Object.assign(u, { checked: Qt.formatTime(new Date(), "HH:mm") })
+                } catch (e) {
+                    root.updates = null
+                }
+            }
+        }
     }
     Timer {
-        interval: 600000
+        interval: 1800000
         repeat: true
         running: true
         triggeredOnStart: true
         onTriggered: root.poll(pkgProc)
     }
 
-    // ── MPD: waybar's mpd module formats ─────────────────────────────
-    function escapeHtml(s) {
-        return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    }
-    Process {
-        id: mpdProc
-        command: ["mpc", "--format", "%artist%\t%title%", "status"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                if (text.trim() === "") return // mpd down, see onExited
-                const lines = text.trim().split("\n")
-                const opts = lines[lines.length - 1]
-                const on = key => new RegExp(key + ":\\s*on").test(opts)
-                const state = lines.length >= 3 ? (lines[1].match(/^\[(\w+)\]/) || [])[1] : "stopped"
-                const blue = s => "<font color=\"#7aa2f7\">" + s + "</font>"
-
-                if (state === "playing") {
-                    const [artist, title] = lines[0].split("\t")
-                    root.mpdText = blue(" ") + root.escapeHtml((artist || "") + " - " + (title || ""))
-                } else if (state === "paused") {
-                    root.mpdText = ""
-                } else {
-                    root.mpdText = (on("consume") ? " " : "")
-                        + (on("random") ? " " : "<font color=\"#f53c3c\"></font> ")
-                        + (on("repeat") ? " " : "")
-                        + (on("single") ? "1 " : "")
-                        + "Stopped "
-                }
-            }
-        }
-        onExited: code => { if (code !== 0) root.mpdText = "Disconnected " }
-    }
-    // Refresh on every player/option change, plus waybar's 10s interval.
-    Process {
-        id: mpdIdle
-        running: true
-        command: ["mpc", "idleloop", "player", "options"]
-        stdout: SplitParser { onRead: root.poll(mpdProc) }
-    }
-    Timer {
-        interval: 10000
-        repeat: true
-        running: true
-        triggeredOnStart: true
-        onTriggered: {
-            root.poll(mpdProc)
-            root.poll(mpdIdle)
-        }
-    }
-
     // ── Volume ───────────────────────────────────────────────────────
     readonly property var sink: Pipewire.defaultAudioSink
     PwObjectTracker { objects: [root.sink] }
+
+    // ── Update window, opened from the updates pill ──────────────────
+    PopupWindow {
+        id: updatesPopup
+        visible: false
+        anchor.item: updatesModule
+        anchor.rect.y: updatesModule.height + 6
+        implicitWidth: 340
+        implicitHeight: updatesCol.implicitHeight + 28
+        color: "transparent"
+
+        // Click outside to close.
+        HyprlandFocusGrab {
+            windows: [updatesPopup]
+            active: updatesPopup.visible
+            onCleared: updatesPopup.visible = false
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            radius: 12
+            color: root.moduleBg
+            border.color: root.accent
+            border.width: 1
+
+            Column {
+                id: updatesCol
+                anchors {
+                    left: parent.left
+                    right: parent.right
+                    top: parent.top
+                    margins: 14
+                }
+                spacing: 8
+
+                component PopupText: Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#c0caf5"
+                    font.family: "SpaceMono Nerd Font"
+                    font.pixelSize: 13
+                }
+
+                PopupText {
+                    text: "System updates"
+                    color: root.accent
+                    font.weight: Font.Black
+                    font.pixelSize: 15
+                }
+
+                PopupText {
+                    visible: root.updates === null
+                    text: pkgProc.running ? "Checking…" : "Couldn't check for updates."
+                }
+
+                PopupText {
+                    visible: root.updates?.offline ?? false
+                    text: "GitHub unreachable, showing local state only."
+                    color: root.urgent
+                }
+
+                PopupText {
+                    visible: root.updates !== null && root.updateCount === 0 && root.updates.behind === 0
+                    text: "Everything is up to date."
+                }
+
+                PopupText {
+                    visible: (root.updates?.behind ?? 0) > 0
+                    text: root.updates ? root.updates.behind + " new commit" + (root.updates.behind === 1 ? "" : "s") + " on GitHub" : ""
+                }
+
+                Repeater {
+                    model: root.updates?.inputs ?? []
+                    PopupText {
+                        required property var modelData
+                        text: "<font color=\"#7aa2f7\">" + modelData.name + "</font>  " + modelData.from + " → " + modelData.to
+                        textFormat: Text.StyledText
+                    }
+                }
+
+                PopupText {
+                    visible: root.updates?.rebuild ?? false
+                    text: "Rebuild pending: the running system is older than flake.lock."
+                    color: root.urgent
+                }
+
+                PopupText {
+                    visible: root.updates !== null
+                    text: "Checked " + (root.updates?.checked ?? "")
+                    color: "#565f89"
+                    font.pixelSize: 11
+                }
+
+                Row {
+                    spacing: 8
+
+                    component PopupButton: Rectangle {
+                        id: button
+                        property string label
+                        signal clicked
+                        implicitWidth: buttonText.implicitWidth + 24
+                        implicitHeight: 28
+                        radius: 14
+                        color: buttonMouse.containsMouse ? root.accent : "#24283b"
+                        Text {
+                            id: buttonText
+                            anchors.centerIn: parent
+                            text: button.label
+                            color: buttonMouse.containsMouse ? root.moduleBg : "#c0caf5"
+                            font.family: "SpaceMono Nerd Font"
+                            font.weight: Font.Black
+                            font.pixelSize: 13
+                        }
+                        MouseArea {
+                            id: buttonMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            onClicked: button.clicked()
+                        }
+                    }
+
+                    PopupButton {
+                        label: pkgProc.running ? "Checking…" : "Check now"
+                        onClicked: root.poll(pkgProc)
+                    }
+
+                    // `upgrade` (home/linux/desktop.nix) pulls CI's flake.lock and rebuilds.
+                    PopupButton {
+                        label: "Upgrade"
+                        onClicked: {
+                            updatesPopup.visible = false
+                            Quickshell.execDetached(["ghostty", "-e", "zsh", "-ic",
+                                "upgrade; echo; read -k1 '?Done, press any key to close'"])
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     // ── Layout ───────────────────────────────────────────────────────
     Item {
         anchors.fill: parent
 
-        // LEFT: ws1..9, clock, kernel, pacman, mpd
+        // LEFT: ws1..9, clock, kernel, updates
         RowLayout {
             anchors {
                 left: parent.left
@@ -253,31 +379,33 @@ PanelWindow {
 
             BarModule {
                 icon: root.clockAlt ? "" : ""
+                iconFont: "feather"
                 text: Qt.formatDateTime(clock.date, root.clockAlt ? "dd-MM-yyyy" : "HH:mm:ss")
                 onClicked: root.clockAlt = !root.clockAlt
+                topRightRadius: 8
+                bottomRightRadius: 8
             }
 
             BarModule {
                 icon: ""
                 text: root.kernelText
-                radius: 8
+                radius: 16
+                Layout.leftMargin: 16
             }
 
             BarModule {
+                id: updatesModule
                 icon: ""
-                text: root.packagesText
-                radius: 8
-            }
-
-            // #mpd has no rule in style.css: no block, default text colour.
-            Text {
-                visible: root.mpdText.length > 0
-                text: root.mpdText
-                textFormat: Text.StyledText
-                color: "#c0caf5"
-                font.family: "SpaceMono Nerd Font"
-                font.weight: Font.Black
-                font.pixelSize: 14
+                iconColor: root.updateCount > 0 ? root.urgent : root.accent
+                text: root.updates === null ? ""
+                    : root.updateCount > 0 ? root.updateCount + (root.updateCount === 1 ? " update" : " updates")
+                    : root.updates.behind > 0 ? root.updates.behind + " new" : "Up to date"
+                onClicked: {
+                    updatesPopup.visible = !updatesPopup.visible
+                    if (updatesPopup.visible) root.poll(pkgProc)
+                }
+                radius: 16
+                Layout.leftMargin: 16
             }
         }
 
@@ -293,7 +421,7 @@ PanelWindow {
             }
         }
 
-        // RIGHT: tray, temperature, cpu, memory, network, pulseaudio
+        // RIGHT: tray, cpu, gpu, memory, network, pulseaudio
         RowLayout {
             anchors {
                 right: parent.right
@@ -348,16 +476,16 @@ PanelWindow {
             }
 
             BarModule {
-                icon: ""
+                icon: ""
                 iconFont: "feather"
-                text: root.tempText
+                text: root.tempText && root.cpuText ? root.tempText + " " + root.cpuText : root.tempText + root.cpuText
                 topLeftRadius: 8
                 bottomLeftRadius: 8
             }
 
             BarModule {
-                icon: ""
-                text: root.cpuText
+                icon: "󰢮"
+                text: root.gpuText
             }
 
             BarModule {
