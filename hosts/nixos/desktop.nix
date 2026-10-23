@@ -137,6 +137,8 @@
   };
   programs.gamemode.enable = true;
   programs.gamescope.enable = true;
+  # G502 SE HERO: DPI, buttons and LEDs via Piper (talks to ratbagd over D-Bus).
+  services.ratbagd.enable = true;
 
   # chiaki-ng discovery broadcasts to the LAN, and the PlayStation answers
   # from 9302 (PS5) / 987 (PS4) to a random port. A reply to a broadcast
@@ -258,6 +260,7 @@
     smartmontools
     efibootmgr
     socat
+    piper
   ];
 
   system.stateVersion = lib.mkForce "26.05";
