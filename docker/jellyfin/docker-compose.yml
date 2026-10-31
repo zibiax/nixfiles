@@ -172,6 +172,27 @@ services:
     depends_on:
       - jellystat-db
 
+  # Cancels a download once its movie/series is removed from Radarr/Sonarr,
+  # e.g. remotely with Seerr's Manage > "Remove from Radarr/Sonarr": deletes
+  # the torrent and its files and clears the title in Seerr. API keys are read
+  # from the services' own configs. See queue-cleaner/cleaner.py.
+  queue-cleaner:
+    <<: *common
+    image: python:3-alpine
+    container_name: queue-cleaner
+    user: 1000:1000
+    command: python -u /app/cleaner.py
+    volumes:
+      - ./queue-cleaner/cleaner.py:/app/cleaner.py:ro
+      - ./queue-cleaner/data:/data
+      - ./radarr:/arr/radarr:ro
+      - ./sonarr:/arr/sonarr:ro
+      - ./seerr:/arr/seerr:ro
+    depends_on:
+      - radarr
+      - sonarr
+      - seerr
+
   # Deletes old, unwatched media through Radarr/Sonarr and lists it in a
   # "Leaving Soon" collection first. Settings (incl. dry-run) in
   # ./janitorr/application.yml, which holds API keys and stays out of git.

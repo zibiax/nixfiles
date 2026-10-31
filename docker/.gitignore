@@ -10,3 +10,4 @@ jellyfin/bazarr/
 jellyfin/seerr/
 jellyfin/jellystat/
 jellyfin/janitorr/
+jellyfin/queue-cleaner/data/
