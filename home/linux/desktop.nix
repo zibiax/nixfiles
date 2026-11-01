@@ -28,7 +28,6 @@ in
     "lazygit"
     "mpv"
     "qt6ct"
-    "ranger"
     "quickshell"
   ] // {
     "gtk-3.0/settings.ini".source = link "modules/gtk-3.0/settings.ini";
@@ -218,7 +217,6 @@ in
     gh
     glab
     git-crypt
-    ranger
     mc
     eza
     erdtree
