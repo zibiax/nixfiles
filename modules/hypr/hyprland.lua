@@ -39,6 +39,8 @@ hl.env("CHROMIUM_FLAGS", "--ozone-platform=wayland")
 -------------------
 -- Things that should only run once, at Hyprland startup (old "exec-once").
 hl.on("hyprland.start", function()
+    -- Starts the systemd user services (dunst, polkit agent) with this session's env
+    hl.exec_cmd("dbus-update-activation-environment --systemd --all && systemctl --user start hyprland-session.target")
     hl.exec_cmd("xrandr --output DP-1 --primary")
     -- hl.exec_cmd("/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1") -- NixOS: polkit agent runs as a systemd user service
     hl.exec_cmd("wl-paste --watch cliphist store")

@@ -93,6 +93,16 @@ in
   # ---------------------------------------------------------------- user services
   services.hyprpolkitagent.enable = true;
 
+  # Started by Hyprland at login (see AUTOSTART in hyprland.lua). lemurs doesn't
+  # start graphical-session.target, and without it dunst and the polkit agent
+  # never run.
+  systemd.user.targets.hyprland-session.Unit = {
+    Description = "Hyprland session";
+    BindsTo = [ "graphical-session.target" ];
+    Wants = [ "graphical-session-pre.target" ];
+    After = [ "graphical-session-pre.target" ];
+  };
+
   systemd.user.services.dunst = {
     Unit = {
       Description = "Dunst notification daemon";

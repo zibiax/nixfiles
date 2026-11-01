@@ -427,3 +427,10 @@ format = "<b>Now Playing</b>\n%s"
 appname = discord
 summary = "*"
 set_stack_tag = "discord"
+
+# Bluetooth connect/disconnect popups: close after a few seconds, even if
+# blueman asks for a longer timeout
+[bluetooth]
+appname = "[Bb]lueman*"
+timeout = 4
+override_dbus_timeout = 4
