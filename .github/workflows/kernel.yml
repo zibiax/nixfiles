@@ -100,4 +100,11 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add flake.lock
           git commit -m "flake.lock: update (kernel $(nix eval --raw .#nixosConfigurations.$HOST.config.boot.kernelPackages.kernel.version))"
-          git push
+          # master may have moved during the build (a push while this ran);
+          # rebase the lock commit onto it. Fails only if flake.lock itself
+          # changed upstream, and then this lock is stale anyway.
+          for i in 1 2 3; do
+            git pull --rebase origin master && git push && exit 0
+            sleep 10
+          done
+          exit 1
