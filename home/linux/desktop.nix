@@ -128,6 +128,7 @@ in
     mako
     swaybg
     swayidle
+    psmisc # killall, pstree, fuser
     hypridle
     hyprlock
     hyprpicker

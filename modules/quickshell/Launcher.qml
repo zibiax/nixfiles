@@ -10,15 +10,11 @@ PanelWindow {
     id: root
 
     visible: false
-    // Full-screen and transparent so a click outside the box closes it,
-    // like rofi's click-to-exit.
-    anchors {
-        top: true
-        bottom: true
-        left: true
-        right: true
-    }
-    // Stay clear of the bar, so centring matches rofi's (work area, not screen).
+    // Only as big as the box (no anchors = centred). A full-screen window needs
+    // a 3440x1404 GPU surface, which fails to allocate (and the launcher stays
+    // invisible) when a game has filled the VRAM.
+    implicitWidth: 550
+    implicitHeight: 360
     exclusiveZone: 0
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Overlay
@@ -102,16 +98,16 @@ PanelWindow {
         visible = false
     }
 
-    MouseArea {
-        anchors.fill: parent
-        onClicked: root.visible = false
+    // Click outside the box closes it, like rofi's click-to-exit.
+    HyprlandFocusGrab {
+        windows: [root]
+        active: root.visible
+        onCleared: root.visible = false
     }
 
     // window { width: 550px; height: 360px; }
     Rectangle {
-        anchors.centerIn: parent
-        width: 550
-        height: 360
+        anchors.fill: parent
         color: root.background
         clip: true
 
