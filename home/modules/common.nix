@@ -72,7 +72,6 @@ in
 
     plugins = [
       (zshPlugin "fzf-tab" pkgs.zsh-fzf-tab "share/fzf-tab" "fzf-tab.plugin.zsh")
-      (zshPlugin "zsh-fzf-history-search" pkgs.zsh-fzf-history-search "share/zsh-fzf-history-search" "zsh-fzf-history-search.plugin.zsh")
       (zshPlugin "fast-syntax-highlighting" pkgs.zsh-fast-syntax-highlighting "share/zsh/plugins/fast-syntax-highlighting" "fast-syntax-highlighting.plugin.zsh")
     ];
 
@@ -129,9 +128,6 @@ in
     EDITOR = "nvim";
     SUDO_PROMPT = "[] Enter Password: ";
     CARGO_HOME = "${config.xdg.dataHome}/cargo";
-    ZSH_FZF_HISTORY_SEARCH_DATES_IN_SEARCH = "0";
-    ZSH_FZF_HISTORY_SEARCH_EVENT_NUMBERS = "0";
-    ZSH_FZF_HISTORY_SEARCH_REMOVE_DUPLICATES = "1";
   };
 
   home.sessionPath = [
@@ -144,8 +140,13 @@ in
 
   programs.fzf = {
     enable = true;
-    # Ctrl-R stays with zsh-fzf-history-search, like on Arch
+    # Ctrl-R belongs to atuin
     enableZshIntegration = false;
+  };
+  programs.atuin = {
+    enable = true;
+    # Up arrow stays with history-substring-search
+    flags = [ "--disable-up-arrow" ];
   };
   programs.bat.enable = true;
   programs.eza.enable = true;
