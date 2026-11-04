@@ -33,6 +33,7 @@ hl.env("CLUTTER_BACKEND", "wayland")
 hl.env("QT_QPA_PLATFORM", "wayland;xcb")
 hl.env("BROWSER", "google-chrome-stable")
 hl.env("CHROMIUM_FLAGS", "--ozone-platform=wayland")
+hl.env("ELECTRON_FORCE_IS_NATIVE_DARK_MODE", "1") -- home.sessionVariables only reach shells, not apps from the launcher
 
 -------------------
 ---- AUTOSTART ----

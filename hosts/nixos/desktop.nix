@@ -83,7 +83,7 @@
     enable = true;
     extraPortals = with pkgs; [ xdg-desktop-portal-gtk ];
   };
-  programs.dconf.enable = true; # gsettings in theming.sh
+  programs.dconf.enable = true; # dconf.settings in home/linux/desktop.nix
   security.polkit.enable = true;
   security.pam.services.hyprlock = { };
   services.gnome.gnome-keyring.enable = true;

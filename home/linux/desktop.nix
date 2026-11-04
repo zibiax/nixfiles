@@ -31,6 +31,7 @@ in
     "quickshell"
   ] // {
     "gtk-3.0/settings.ini".source = link "modules/gtk-3.0/settings.ini";
+    "gtk-4.0/settings.ini".source = link "modules/gtk-4.0/settings.ini";
   };
 
   home.file = {
@@ -82,6 +83,13 @@ in
 
 
   # ---------------------------------------------------------------- theming
+  # xdg-desktop-portal-gtk reads color-scheme from here and tells apps (Chrome,
+  # Electron, libadwaita) to go dark.
+  dconf.settings."org/gnome/desktop/interface" = {
+    color-scheme = "prefer-dark";
+    gtk-theme = "adw-gtk3-dark";
+  };
+
   home.pointerCursor = {
     enable = true;
     package = pkgs.simp1e-cursors;
