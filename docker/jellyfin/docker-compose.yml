@@ -193,6 +193,26 @@ services:
       - sonarr
       - seerr
 
+  # Prefers efficient 4K HDR, else 1080p (HDR first), max 15 GB: sets up the
+  # "Efficient 4K HDR" profile in Radarr/Sonarr and makes it Seerr's default.
+  # Runs once per `up` and exits. See arr-profiles/profiles.py.
+  arr-profiles:
+    <<: *common
+    image: python:3-alpine
+    container_name: arr-profiles
+    restart: "no"
+    user: 1000:1000
+    command: python -u /app/profiles.py
+    volumes:
+      - ./arr-profiles/profiles.py:/app/profiles.py:ro
+      - ./radarr:/arr/radarr:ro
+      - ./sonarr:/arr/sonarr:ro
+      - ./seerr:/arr/seerr:ro
+    depends_on:
+      - radarr
+      - sonarr
+      - seerr
+
   # Deletes old, unwatched media through Radarr/Sonarr and lists it in a
   # "Leaving Soon" collection first. Settings (incl. dry-run) in
   # ./janitorr/application.yml, which holds API keys and stays out of git.
