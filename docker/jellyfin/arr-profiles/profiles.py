@@ -2,9 +2,9 @@
 
 Ranking: 2160p HDR > 1080p HDR > 1080p. Rejected: 2160p without HDR, Dolby
 Vision without an HDR10 fallback, AV1 (no hardware decode on the RTX 2060),
-upscales and remuxes. Radarr rejects releases over 15 GB; Sonarr caps 2160p at
-125 MB/min instead, since a size format would also reject season packs. Seerr
-requests use the profile by default.
+upscales, BRRips and remuxes. Radarr rejects releases over 15 GB; Sonarr caps
+2160p at 200 MB/min instead (about 9 GB for a 46 min episode), since a size
+format would also reject season packs. Seerr requests use the profile by default.
 
 Runs once at `docker compose up` and updates everything by name, so it can be
 rerun any time. Edits made in the UI to these formats/profile get overwritten.
@@ -23,13 +23,14 @@ HDR10P = r"\bHDR10(\+|P(lus)?)(?![a-z])"
 DV = r"\b(DV|DoVi|Dolby[ ._-]?Vision)\b"
 X265 = r"\b(x265|HEVC|h[ ._-]?265)\b"
 AV1 = r"\bAV1\b"
+BRRIP = r"\bBR[ ._-]?Rip\b"
 UPSCALED = r"\b(Up(scaled?|rez)|AI[ ._-]?(Up(scaled?)?|Enhanced))\b"
 
 ARRS = [
     {"name": "radarr", "url": "http://radarr:7878/api/v3", "conf": "/arr/radarr/config.xml",
      "max_2160": 200},  # the 15 GB format below is the real cap
     {"name": "sonarr", "url": "http://sonarr:8989/api/v3", "conf": "/arr/sonarr/config.xml",
-     "max_2160": 125},  # MB/min: 15 GB per 2 hours
+     "max_2160": 200},  # MB/min
 ]
 SEERR = "http://seerr:5055/api/v1"
 SEERR_CONF = "/arr/seerr/settings.json"
@@ -67,19 +68,24 @@ def title(name, pattern, negate=False):
             "required": True, "fields": [{"name": "value", "value": pattern}]}
 
 
+def is_2160p():
+    return {"name": "2160p", "implementation": "ResolutionSpecification", "negate": False,
+            "required": True, "fields": [{"name": "value", "value": 2160}]}
+
+
 def formats(app):
     f = [
         ("HDR", 500, [title("HDR", HDR)]),
         ("HDR10+", 100, [title("HDR10+", HDR10P)]),
         ("DV with HDR10 fallback", 100, [title("DV", DV), title("HDR", HDR)]),
         ("DV without fallback", REJECT, [title("DV", DV), title("Not HDR", HDR, negate=True)]),
-        ("x265", 50, [title("x265", X265)]),
+        # 4K only: at 1080p small x265 re-encodes would outrank proper encodes
+        ("x265", 50, [title("x265", X265), is_2160p()]),
         ("AV1", REJECT, [title("AV1", AV1)]),
         ("Upscaled", REJECT, [title("Upscaled", UPSCALED)]),
+        ("BRRip", REJECT, [title("BRRip", BRRIP)]),
         ("2160p without HDR", REJECT, [
-            {"name": "2160p", "implementation": "ResolutionSpecification", "negate": False,
-             "required": True, "fields": [{"name": "value", "value": 2160}]},
-            title("Not HDR", HDR, negate=True), title("Not DV", DV, negate=True)]),
+            is_2160p(), title("Not HDR", HDR, negate=True), title("Not DV", DV, negate=True)]),
     ]
     if app == "radarr":
         f.append(("Over 15 GB", REJECT, [

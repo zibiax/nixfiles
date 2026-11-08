@@ -225,6 +225,13 @@
   programs.appimage = {
     enable = true;
     binfmt = true;
+    # Libs AppImages expect from the host but don't bundle (e.g. lichii).
+    package = pkgs.appimage-run.override {
+      extraPkgs = pkgs: with pkgs; [
+        libgpg-error
+        libgcrypt
+      ];
+    };
   };
   services.flatpak.enable = true; # Bottles was a flatpak on Arch
   services.fwupd.enable = true;
