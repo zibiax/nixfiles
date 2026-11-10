@@ -381,7 +381,6 @@ in
     shadps4
     chiaki-ng
     dosbox
-    dwarf-fortress
     parsec-bin
     bottles
     looking-glass-client
@@ -390,7 +389,6 @@ in
     cameractrls
     unityhub
     geekbench
-    codex
     android-backup-extractor
     webcord
     tinymediamanager
