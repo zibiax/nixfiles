@@ -26,6 +26,9 @@
   boot.supportedFilesystems = [ "ntfs" ];
 
   zramSwap.enable = true;
+  # The CachyOS kernel turns zswap on by default, which sits in front of zram
+  # and compresses every swapped page twice.
+  boot.kernelParams = [ "zswap.enabled=0" ];
 
   console.keyMap = "sv-latin1";
   services.xserver.xkb.layout = "se";
