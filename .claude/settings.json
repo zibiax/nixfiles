@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(nix eval *)",
+      "Bash(journalctl -k*)",
+      "Bash(journalctl -b*)",
+      "Bash(journalctl -u *)",
+      "Bash(systemctl status *)",
+      "Bash(systemctl --user status *)",
+      "Bash(systemctl is-active *)",
+      "Bash(ip -s *)",
+      "Bash(ip route*)",
+      "Bash(ip neigh*)",
+      "Bash(hyprctl layers*)",
+      "Bash(docker compose config*)",
+      "Bash(docker compose ps*)",
+      "Bash(docker compose logs *)",
+      "Bash(docker image inspect *)",
+      "Bash(docker manifest inspect *)",
+      "Bash(nix-store -qR *)",
+      "Bash(lsusb*)",
+      "Bash(lspci*)",
+      "Bash(wpctl status*)"
+    ]
+  }
+}

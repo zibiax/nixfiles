@@ -379,6 +379,7 @@ in
     pcsx2
     rpcs3
     shadps4
+    eden
     chiaki-ng
     dosbox
     parsec-bin

@@ -1,0 +1,45 @@
+{
+  "nodes": {
+    "lichii-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1794332921,
+        "narHash": "sha256-nAj8QiCB/awsnVzYs5oF937d5b+nELA06sItGFCzfu0=",
+        "owner": "zortos293",
+        "repo": "Lichii",
+        "rev": "e8be28e5d6a74c54c05b505c7caa7884403f80b6",
+        "type": "github"
+      },
+      "original": {
+        "owner": "zortos293",
+        "ref": "nx2",
+        "repo": "Lichii",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1793931523,
+        "narHash": "sha256-kyzSFmRVevj9lr2XVskwKnae/pXJEbQ+bHKc+mpjqFE=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "7dd597af6a9776394693e4d0fed85dd5ea8d56da",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "lichii-src": "lichii-src",
+        "nixpkgs": "nixpkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
