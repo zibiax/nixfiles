@@ -20,7 +20,13 @@
       "Bash(nix-store -qR *)",
       "Bash(lsusb*)",
       "Bash(lspci*)",
-      "Bash(wpctl status*)"
+      "Bash(wpctl status*)",
+      "Bash(nvidia-smi)",
+      "Bash(nvidia-smi --query*)",
+      "Bash(nvidia-smi pmon*)",
+      "Bash(nvidia-smi dmon*)",
+      "Bash(sensors*)",
+      "Bash(pactl list*)"
     ]
   }
 }
