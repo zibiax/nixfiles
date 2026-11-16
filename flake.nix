@@ -20,6 +20,10 @@
     # CachyOS kernels. `release` tracks versions known to build; don't make it
     # follow our nixpkgs, the patches are pinned against its own.
     nix-cachyos-kernel.url = "github:xddxdd/nix-cachyos-kernel/release";
+    helium = {
+      url = "path:./flakes/helium";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs@{ self, nixpkgs, nix-darwin, home-manager, nixos-hardware, agenix, flake-utils, ... }:

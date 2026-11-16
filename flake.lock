@@ -72,6 +72,22 @@
         "type": "github"
       }
     },
+    "helium": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "path": "./flakes/helium",
+        "type": "path"
+      },
+      "original": {
+        "path": "./flakes/helium",
+        "type": "path"
+      },
+      "parent": []
+    },
     "home-manager": {
       "inputs": {
         "nixpkgs": [
@@ -215,6 +231,7 @@
       "inputs": {
         "agenix": "agenix",
         "flake-utils": "flake-utils",
+        "helium": "helium",
         "home-manager": "home-manager",
         "nix-cachyos-kernel": "nix-cachyos-kernel",
         "nix-darwin": "nix-darwin",

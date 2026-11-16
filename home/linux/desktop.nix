@@ -1,4 +1,4 @@
-{ config, pkgs, lib, user, ... }:
+{ config, pkgs, lib, user, inputs, ... }:
 
 
 let
@@ -319,6 +319,7 @@ in
     librewolf
     chromium
     google-chrome
+    inputs.helium.packages.${pkgs.stdenv.hostPlatform.system}.helium
     signal-desktop
     vesktop
     zoom-us
