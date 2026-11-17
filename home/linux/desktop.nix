@@ -230,7 +230,6 @@ in
     erdtree
     duf
     bottom
-    glances
     nvtopPackages.nvidia
     s-tui
     fastfetch
