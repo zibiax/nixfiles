@@ -183,6 +183,10 @@
 
   # ---------------------------------------------------------------- servers
   services.openssh.enable = true;
+  # Proton Pass key "Martin-ssh" (SHA256:1djDWVtU53ho5+yn3nbVdRP2/cXsidrho67XxyruVEE)
+  users.users.${user}.openssh.authorizedKeys.keys = [
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMNDaGaVQO2NPpveAyT22N/2buyaREkMTf4TXS8VOdqy martin@evenbom.se"
+  ];
   programs.ssh.knownHosts."github.com".publicKey =
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl";
 
