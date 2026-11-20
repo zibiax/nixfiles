@@ -86,14 +86,17 @@ PanelWindow {
     function launch(index) {
         if (index < 0 || index >= apps.length) return
         const entry = apps[index]
-        // execute() ignores Terminal=true; rofi runs those in its terminal.
-        if (entry.runInTerminal)
-            Quickshell.execDetached({
-                command: ["kitty", "-e"].concat(Array.from(entry.command)),
-                workingDirectory: entry.workingDirectory
-            })
-        else
-            entry.execute()
+        // Launched apps would inherit quickshell's own Qt settings
+        // (QT_QUICK_BACKEND=software from relaunch.sh, the wrapper's
+        // QT_PLUGIN_PATH); Qt Quick apps such as chiaki-ng render black with them.
+        // execute() can't change the environment, so run the command ourselves.
+        // It also ignores Terminal=true; rofi runs those in its terminal.
+        const cleanEnv = ["env", "-u", "QT_QUICK_BACKEND", "-u", "QT_PLUGIN_PATH"]
+        const command = Array.from(entry.command)
+        Quickshell.execDetached({
+            command: cleanEnv.concat(entry.runInTerminal ? ["kitty", "-e"].concat(command) : command),
+            workingDirectory: entry.workingDirectory
+        })
         recordLaunch(entry)
         visible = false
     }
